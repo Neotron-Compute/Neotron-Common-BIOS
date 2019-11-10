@@ -37,7 +37,7 @@ jobs:
     - name: Build
       run: cargo build --verbose --target=${TARGET}
 
-  build_thumbv8m.main:
+  build_thumbv8m_main:
     env:
         TARGET: thumbv8m.main-none-eabi
     runs-on: ubuntu-latest
@@ -48,7 +48,7 @@ jobs:
     - name: Build
       run: cargo build --verbose --target=${TARGET}
 
-  build_thumbv8m.base:
+  build_thumbv8m_base:
     env:
         TARGET: thumbv8m.base-none-eabi
     runs-on: ubuntu-latest
