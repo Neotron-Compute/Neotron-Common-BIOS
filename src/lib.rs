@@ -2,6 +2,8 @@
 //!
 //! Contains the common API for all Neotron BIOS implementations.
 
+#![no_std]
+
 /// BIOS API semantic version for the API defined in this crate, as <0x00>
 /// <major> <minor> <patch>.
 pub const API_VERSION: u32 = 0x0000_0100;
