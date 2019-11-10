@@ -1,0 +1,61 @@
+name: Rust
+
+on: [push, pull_request]
+
+jobs:
+
+  build_thumbv7m:
+    env:
+        TARGET: thumbv7m-none-eabi
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Add Target
+      run: rustup target add ${TARGET}
+    - name: Build
+      run: cargo build --verbose --target=${TARGET}
+
+  build_thumbv7em:
+    env:
+        TARGET: thumbv7em-none-eabi
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Add Target
+      run: rustup target add ${TARGET}
+    - name: Build
+      run: cargo build --verbose --target=${TARGET}
+
+  build_thumbv7em_hf:
+    env:
+        TARGET: thumbv7em-none-eabihf
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Add Target
+      run: rustup target add ${TARGET}
+    - name: Build
+      run: cargo build --verbose --target=${TARGET}
+
+  build_thumbv8m.main:
+    env:
+        TARGET: thumbv8m.main-none-eabi
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Add Target
+      run: rustup target add ${TARGET}
+    - name: Build
+      run: cargo build --verbose --target=${TARGET}
+
+  build_thumbv8m.base:
+    env:
+        TARGET: thumbv8m.base-none-eabi
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Add Target
+      run: rustup target add ${TARGET}
+    - name: Build
+      run: cargo build --verbose --target=${TARGET}
+
