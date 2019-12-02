@@ -20,6 +20,7 @@
 //!     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #![no_std]
+#![deny(missing_docs)]
 
 /// BIOS API semantic version for the API defined in this crate, as <0x00>
 /// <major> <minor> <patch>.
@@ -33,7 +34,14 @@ pub type OsStartFn = extern "C" fn(&Api) -> !;
 #[derive(Debug)]
 #[repr(C)]
 pub enum Error {
+	/// An invalid device number was given to the function.
 	InvalidDevice,
+	/// The underlying hardware reported some error. The numeric code is BIOS
+	/// implementation specific but may give some clues.
+	DeviceError(u16),
+	/// The underlying hardware could not accept the given configuration. The
+	/// numeric code is BIOS implementation specific but may give some clues.
+	UnsupportedConfiguration(u16),
 }
 
 /// All API functions which can fail return this type. We don't use the
@@ -41,7 +49,9 @@ pub enum Error {
 /// may change layout between compiler versions.
 #[repr(C)]
 pub enum Result<T> {
+	/// The operation succeeded (the same as `core::result::Result::Ok`).
 	Ok(T),
+	/// The operation failed (the same as `core::result::Result::Err`).
 	Err(Error),
 }
 
@@ -50,7 +60,9 @@ pub enum Result<T> {
 /// FFI safe and may change layout between compiler versions.
 #[repr(C)]
 pub enum Option<T> {
+	/// There is some data (the same as `core::option::Option::Some`)
 	Some(T),
+	/// There is no data (the same as `core::option::Option::None`)
 	None,
 }
 
@@ -62,18 +74,23 @@ pub struct Timeout(u32);
 /// valid until the callee returns to the caller. Is not null-terminated.
 #[repr(C)]
 #[derive(Clone)]
-pub struct ApiString(ApiByteSlice);
+pub struct ApiString<'a>(ApiByteSlice<'a>);
 
 /// A Rust u8 slice, but compatible with FFI. Assume the lifetime is only valid
 /// until the callee returns to the caller.
 #[repr(C)]
 #[derive(Clone)]
-pub struct ApiByteSlice {
+pub struct ApiByteSlice<'a> {
+	/// A pointer to the data
 	pub data: *const u8,
+	/// The number of bytes we are pointing at
 	pub data_len: usize,
+	/// A phantom object to hold the lifetime
+	_phantom: core::marker::PhantomData<&'a [u8]>,
 }
 
-/// Represents an instant in time between 2000-01-01T00:00:00Z and 2136-02-07T06:28:16Z.
+/// Represents an instant in time between 2000-01-01T00:00:00Z and
+/// 2136-02-07T06:28:16Z.
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct Time {
@@ -86,7 +103,8 @@ pub struct Time {
 
 /// The BIOS API.
 ///
-/// All Neotron BIOSes should provide this structure to the OS initialisation function.
+/// All Neotron BIOSes should provide this structure to the OS initialisation
+/// function.
 #[repr(C)]
 pub struct Api {
 	/// Gets the version number of the BIOS API. You need this value to
@@ -100,7 +118,7 @@ pub struct Api {
 	/// (excluding the null) to make it easy to construct a Rust string. It is
 	/// unspecified as to whether the string is located in Flash ROM or RAM
 	/// (but it's likely to be Flash ROM).
-	pub bios_version_get: extern "C" fn() -> ApiString,
+	pub bios_version_get: extern "C" fn() -> ApiString<'static>,
 	/// Get information about the Serial ports in the system. Serial ports are
 	/// ordered octet-oriented pipes. You can push octets into them using a
 	/// 'write' call, and pull bytes out of them using a 'read' call. They
@@ -174,61 +192,147 @@ pub mod serial {
 	/// calculated.
 	#[repr(C)]
 	pub enum Parity {
+		/// An extra parity bit is added to each word. There will be an odd
+		/// number of `1` bits in the new word (old word + parity bit). This
+		/// parity bit can be used to detect a single bitflip in each word, but
+		/// it cannot correct that bitflip.
 		Odd,
+		/// An extra parity bit is added to each word. There will be an even
+		/// number of `1` bits in the new word (old word + parity bit). This
+		/// parity bit can be used to detect a single bitflip in each word, but
+		/// it cannot correct that bitflip.
 		Even,
+		/// No extra parity bit is added.
 		None,
 	}
 
 	/// Whether to use hardware handshaking lines.
 	#[repr(C)]
 	pub enum Handshaking {
+		/// No hardware handshaking - bytes will be dropped if there is an
+		/// overflow
 		None,
+		/// The Data Terminal Equipment (DTE) asserts Request-To-Send (RTS) when
+		/// it is ready to receive data, and the Data Communications Equipment
+		/// (DCE) asserts Clear-To-Send (CTS) when it is ready to receive data.
 		RtsCts,
+		/// Each device will send a Transmit-Off (XOFF) byte (0x13) when its
+		/// receiving serial buffer is full, and a Transmit-On (XON) byte (0x11)
+		/// when there is buffer space and the transmission can be resumed.
+		///
+		/// Note that the driver will not replace or delete any XON or XOFF
+		/// bytes sent to the stream, so both sides must avoid sending them as
+		/// part of the normal data flow.
+		XonXoff,
 	}
 
 	/// The number of stop bits after each word.
 	#[repr(C)]
 	pub enum StopBits {
+		/// One stop bit is added to each word
 		One,
+		/// Two stop bits are added to each word
 		Two,
 	}
 
 	/// The number of data bits in each word sent or received by the UART.
 	#[repr(C)]
 	pub enum DataBits {
+		/// Each word comprises 7 data bits (plus start bit, stop bits and any
+		/// parity bits)
 		Seven,
+		/// Each word comprises 8 data bits (plus start bit, stop bits and any
+		/// parity bits)
 		Eight,
 	}
 
 	/// A particular configuration for a serial port.
 	#[repr(C)]
 	pub struct Config {
+		/// The desired transmission speed, in bits per second (also known as
+		/// the 'baud rate'). Some hardware implementations allow a free choice
+		/// of data rate, while other limit you to a small subset (e.g. 9600,
+		/// 57600 and 115200).
 		pub data_rate_bps: u32,
+		/// The desired number of data bits
 		pub data_bits: DataBits,
+		/// The desired number of stop bits
 		pub stop_bits: StopBits,
+		/// The desired parity configuration
 		pub parity: Parity,
+		/// The desired handshaking configuration
 		pub handshaking: Handshaking,
 	}
 
 	/// Information about a particular serial device.
 	#[repr(C)]
 	pub struct DeviceInfo {
-		pub name: crate::ApiString,
+		/// Some human-readable name for this serial device (e.g. `RS232` or
+		/// `USB0`)
+		pub name: crate::ApiString<'static>,
+		/// The type of this serial device
 		pub device_type: DeviceType,
 	}
 }
 
-impl core::fmt::Debug for ApiByteSlice {
+impl core::fmt::Debug for ApiByteSlice<'_> {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let slice = self.as_slice();
 		write!(f, "[ ")?;
-		for i in 0..self.data_len {
-			write!(f, "0x{:02x}, ", unsafe { *self.data.add(i) })?;
+		if let Some((last, rest)) = slice.split_last() {
+			for i in rest.iter() {
+				write!(f, "0x{:02x}, ", i)?;
+			}
+			write!(f, "0x{:02x} ", last)?;
 		}
 		write!(f, "]")
 	}
 }
 
-impl core::fmt::Debug for ApiString {
+impl<'a> ApiByteSlice<'a> {
+	/// Create a new byte slice we can send over the FFI. NB: By doing this Rust
+	/// can't track lifetimes any more.
+	pub fn new(s: &'a [u8]) -> ApiByteSlice<'a> {
+		ApiByteSlice {
+			data: s.as_ptr(),
+			data_len: s.len(),
+			_phantom: core::marker::PhantomData,
+		}
+	}
+
+	/// Turn this byte slice into a Rust byte slice.
+	pub fn as_slice(&self) -> &[u8] {
+		unsafe { core::slice::from_raw_parts(self.data, self.data_len) }
+	}
+}
+
+impl<'a> From<&'a [u8]> for ApiByteSlice<'a> {
+	/// Convert from a Rust byte slice into an FFI compatible byte slice
+	fn from(input: &'a [u8]) -> ApiByteSlice<'a> {
+		ApiByteSlice::new(input)
+	}
+}
+
+impl<'a> ApiString<'a> {
+	/// Create a new string slice we can send over the FFI.
+	pub fn new(s: &'a str) -> ApiString<'a> {
+		ApiString(ApiByteSlice::new(s.as_bytes()))
+	}
+
+	/// Turn this FFI string into a Rust string slice.
+	pub fn as_str(&'a self) -> &'a str {
+		unsafe { core::str::from_utf8_unchecked(self.0.as_slice()) }
+	}
+}
+
+impl<'a> From<&'a str> for ApiString<'a> {
+	/// Create a new FFI string from a string slice.
+	fn from(input: &'a str) -> ApiString<'a> {
+		ApiString::new(input)
+	}
+}
+
+impl core::fmt::Debug for ApiString<'_> {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let buffer = unsafe { core::slice::from_raw_parts(self.0.data, self.0.data_len) };
 		let s = unsafe { core::str::from_utf8_unchecked(&buffer) };
@@ -236,32 +340,11 @@ impl core::fmt::Debug for ApiString {
 	}
 }
 
-impl core::fmt::Display for ApiString {
+impl core::fmt::Display for ApiString<'_> {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let buffer = unsafe { core::slice::from_raw_parts(self.0.data, self.0.data_len) };
 		let s = unsafe { core::str::from_utf8_unchecked(&buffer) };
 		write!(f, "{}", s)
-	}
-}
-
-impl ApiByteSlice {
-	pub const fn new(s: &[u8]) -> ApiByteSlice {
-		ApiByteSlice {
-			data: s.as_ptr(),
-			data_len: s.len(),
-		}
-	}
-}
-
-impl ApiString {
-	pub const fn new(s: &str) -> ApiString {
-		ApiString(ApiByteSlice::new(s.as_bytes()))
-	}
-}
-
-impl From<&str> for ApiString {
-	fn from(input: &str) -> ApiString {
-		ApiString::new(input)
 	}
 }
 
