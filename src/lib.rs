@@ -95,10 +95,10 @@ pub struct ApiByteSlice<'a> {
 #[derive(Debug, Clone)]
 pub struct Time {
 	/// Seconds since 2000-01-01T00:00:00Z
-	seconds_since_epoch: u32,
+	pub seconds_since_epoch: u32,
 	/// Number of 60 Hz frames that have elapsed since the current second
 	/// began [0..59].
-	frames_since_second: u8,
+	pub frames_since_second: u8,
 }
 
 /// The BIOS API.
