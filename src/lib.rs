@@ -164,6 +164,12 @@ pub struct Api {
 	/// fix). The BIOS should push the time out to the battery-backed Real
 	/// Time Clock, if it has one.
 	pub time_set: extern "C" fn(time: Time),
+	/// Get the memory address for the video buffer.
+	///
+	/// Currently this only supports text mode. Each character on screen uses
+	/// two consecutive bytes - one for the glyph and one for the attribute.
+	pub video_memory_info_get:
+		extern "C" fn(address: &mut *mut u8, width_cols: &mut u8, height_rows: &mut u8),
 }
 
 /// Serial Port / UART related types.
@@ -345,6 +351,18 @@ impl core::fmt::Display for ApiString<'_> {
 		let buffer = unsafe { core::slice::from_raw_parts(self.0.data, self.0.data_len) };
 		let s = unsafe { core::str::from_utf8_unchecked(&buffer) };
 		write!(f, "{}", s)
+	}
+}
+
+impl core::fmt::Display for Time {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
+		use chrono::prelude::*;
+		let our_epoch = Utc.ymd(2001, 1, 1).and_hms(0, 0, 0).timestamp();
+		let time = chrono::Utc.timestamp(
+			i64::from(self.seconds_since_epoch) + our_epoch,
+			((u32::from(self.frames_since_second) * 1_000_000) / 60) * 1_000,
+		);
+		write!(f, "{}", time)
 	}
 }
 
