@@ -57,6 +57,18 @@ pub enum Result<T> {
 	Err(Error),
 }
 
+impl<T> Result<T> {
+	/// Obtain the inner value, or panic - just like `core::Result::unwrap`.
+	pub fn unwrap(self) -> T {
+		match self {
+			crate::Result::Ok(val) => val,
+			crate::Result::Err(e) => {
+				panic!("Unwrap called, got err {:?}", e);
+			}
+		}
+	}
+}
+
 /// All API functions which take/return optional values return this type. We
 /// don't use the `Option` type from the standard library because that isn't
 /// FFI safe and may change layout between compiler versions.
