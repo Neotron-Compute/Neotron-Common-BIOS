@@ -190,6 +190,7 @@ pub struct Api {
 pub mod serial {
 	/// Identities which sort of serial port each device represents.
 	#[repr(C)]
+	#[derive(Copy, Clone, PartialEq, Eq)]
 	pub enum DeviceType {
 		/// A MIDI interface
 		Midi,
@@ -211,6 +212,7 @@ pub mod serial {
 	/// Whether each word contains a parity bit, and if so, how it is
 	/// calculated.
 	#[repr(C)]
+	#[derive(Copy, Clone, PartialEq, Eq)]
 	pub enum Parity {
 		/// An extra parity bit is added to each word. There will be an odd
 		/// number of `1` bits in the new word (old word + parity bit). This
@@ -228,6 +230,7 @@ pub mod serial {
 
 	/// Whether to use hardware handshaking lines.
 	#[repr(C)]
+	#[derive(Copy, Clone, PartialEq, Eq)]
 	pub enum Handshaking {
 		/// No hardware handshaking - bytes will be dropped if there is an
 		/// overflow
@@ -248,6 +251,7 @@ pub mod serial {
 
 	/// The number of stop bits after each word.
 	#[repr(C)]
+	#[derive(Copy, Clone, PartialEq, Eq)]
 	pub enum StopBits {
 		/// One stop bit is added to each word
 		One,
@@ -257,6 +261,7 @@ pub mod serial {
 
 	/// The number of data bits in each word sent or received by the UART.
 	#[repr(C)]
+	#[derive(Copy, Clone, PartialEq, Eq)]
 	pub enum DataBits {
 		/// Each word comprises 7 data bits (plus start bit, stop bits and any
 		/// parity bits)
@@ -268,6 +273,7 @@ pub mod serial {
 
 	/// A particular configuration for a serial port.
 	#[repr(C)]
+	#[derive(Clone)]
 	pub struct Config {
 		/// The desired transmission speed, in bits per second (also known as
 		/// the 'baud rate'). Some hardware implementations allow a free choice
@@ -286,6 +292,7 @@ pub mod serial {
 
 	/// Information about a particular serial device.
 	#[repr(C)]
+	#[derive(Clone)]
 	pub struct DeviceInfo {
 		/// Some human-readable name for this serial device (e.g. `RS232` or
 		/// `USB0`)
