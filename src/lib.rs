@@ -4,7 +4,7 @@
 //!
 //! ## License
 //!
-//!     Copyright (C) 2019 Jonathan 'theJPster' Pallant <github@thejpster.org.uk>
+//!     Copyright (C) The Neotron Developers, 2019-2020
 //!
 //!     This program is free software: you can redistribute it and/or modify
 //!     it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 
 /// BIOS API semantic version for the API defined in this crate, as <0x00>
 /// <major> <minor> <patch>.
-pub const API_VERSION: u32 = 0x0000_0100;
+pub const API_VERSION: u32 = 0x00_00_02_00;
 
 /// The type of the function which starts up the Operating System. The BIOS
 /// finds and calls this function.
@@ -98,6 +98,19 @@ pub struct ApiByteSlice<'a> {
 	/// A pointer to the data
 	pub data: *const u8,
 	/// The number of bytes we are pointing at
+	pub data_len: usize,
+	/// A phantom object to hold the lifetime
+	_phantom: core::marker::PhantomData<&'a [u8]>,
+}
+
+/// A Rust u8 mutable slice, but compatible with FFI. Assume the lifetime is
+/// only valid until the callee returns to the caller.
+#[repr(C)]
+#[derive(Clone)]
+pub struct ApiBuffer<'a> {
+	/// A pointer to where the data can be put
+	pub data: *mut u8,
+	/// The maximum number of bytes we can store in this buffer
 	pub data_len: usize,
 	/// A phantom object to hold the lifetime
 	_phantom: core::marker::PhantomData<&'a [u8]>,
@@ -184,6 +197,16 @@ pub struct Api {
 	/// two consecutive bytes - one for the glyph and one for the attribute.
 	pub video_memory_info_get:
 		extern "C" fn(address: &mut *mut u8, width_cols: &mut u8, height_rows: &mut u8),
+	/// Get the configuration data block.
+	///
+	/// Configuration data is, to the BIOS, just a block of bytes of a given
+	/// length. How it stores them is up to the BIOS - it could be EEPROM, or
+	/// battery-backed SRAM.
+	pub configuration_get: extern "C" fn(buffer: ApiBuffer) -> crate::Result<usize>,
+	/// Set the configuration data block.
+	///
+	/// See `configuration_get`.
+	pub configuration_set: extern "C" fn(buffer: ApiByteSlice) -> crate::Result<()>,
 }
 
 /// Serial Port / UART related types.
@@ -337,6 +360,49 @@ impl<'a> From<&'a [u8]> for ApiByteSlice<'a> {
 	/// Convert from a Rust byte slice into an FFI compatible byte slice
 	fn from(input: &'a [u8]) -> ApiByteSlice<'a> {
 		ApiByteSlice::new(input)
+	}
+}
+
+impl core::fmt::Debug for ApiBuffer<'_> {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let slice = self.as_slice();
+		write!(f, "[ ")?;
+		if let Some((last, rest)) = slice.split_last() {
+			for i in rest.iter() {
+				write!(f, "0x{:02x}, ", i)?;
+			}
+			write!(f, "0x{:02x} ", last)?;
+		}
+		write!(f, "]")
+	}
+}
+
+impl<'a> ApiBuffer<'a> {
+	/// Create a new buffer we can send over the FFI. NB: By doing this Rust
+	/// can't track lifetimes any more.
+	pub fn new(s: &'a mut [u8]) -> ApiBuffer<'a> {
+		ApiBuffer {
+			data: s.as_mut_ptr(),
+			data_len: s.len(),
+			_phantom: core::marker::PhantomData,
+		}
+	}
+
+	/// Turn this buffer into a Rust byte slice.
+	pub fn as_slice(&self) -> &[u8] {
+		unsafe { core::slice::from_raw_parts(self.data, self.data_len) }
+	}
+
+	/// Turn this buffer into a Rust mutable byte slice.
+	pub fn as_mut_slice(&mut self) -> &mut [u8] {
+		unsafe { core::slice::from_raw_parts_mut(self.data, self.data_len) }
+	}
+}
+
+impl<'a> From<&'a mut [u8]> for ApiBuffer<'a> {
+	/// Convert from a Rust byte slice into an FFI compatible byte slice
+	fn from(input: &'a mut [u8]) -> ApiBuffer<'a> {
+		ApiBuffer::new(input)
 	}
 }
 
