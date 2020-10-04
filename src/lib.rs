@@ -36,6 +36,8 @@ pub type OsStartFn = extern "C" fn(&Api) -> !;
 pub enum Error {
 	/// An invalid device number was given to the function.
 	InvalidDevice,
+	/// That function doesn't work at this time.
+	Unimplemented,
 	/// The underlying hardware reported some error. The numeric code is BIOS
 	/// implementation specific but may give some clues.
 	DeviceError(u16),
