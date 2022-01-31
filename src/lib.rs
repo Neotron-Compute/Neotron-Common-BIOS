@@ -103,12 +103,6 @@ pub struct Api {
 	/// fix). The BIOS should push the time out to the battery-backed Real
 	/// Time Clock, if it has one.
 	pub time_set: extern "C" fn(time: Time),
-	/// Get the memory address for the video buffer.
-	///
-	/// Currently this only supports text mode. Each character on screen uses
-	/// two consecutive bytes - one for the glyph and one for the attribute.
-	pub video_memory_info_get:
-		extern "C" fn(address: &mut *mut u8, width_cols: &mut u8, height_rows: &mut u8),
 	/// Get the configuration data block.
 	///
 	/// Configuration data is, to the BIOS, just a block of bytes of a given
@@ -119,6 +113,66 @@ pub struct Api {
 	///
 	/// See `configuration_get`.
 	pub configuration_set: extern "C" fn(buffer: ApiByteSlice) -> crate::Result<()>,
+	/// Does this Neotron BIOS support this video mode?
+	pub video_is_valid_mode: extern "C" fn(mode: video::Mode) -> bool,
+	/// Switch to a new video mode.
+	///
+	/// The contents of the screen are undefined after a call to this function.
+	///
+	/// If the BIOS does not have enough reserved RAM (or dedicated VRAM) to
+	/// support this mode, the change will succeed but a subsequent call to
+	/// `video_get_framebuffer` will return `null`. You must then supply a
+	/// pointer to a block of size `Mode::frame_size_bytes()` to
+	/// `video_set_framebuffer` before any video will appear.
+	pub video_set_mode: extern "C" fn(mode: video::Mode) -> crate::Result<()>,
+	/// Returns the video mode the BIOS is currently in.
+	///
+	/// The OS should call this function immediately after start-up and note
+	/// the value - this is the `default` video mode which can always be
+	/// serviced without supplying extra RAM.
+	pub video_get_mode: extern "C" fn() -> video::Mode,
+	/// Get the framebuffer address.
+	///
+	/// We can write through this address to the video framebuffer. The
+	/// meaning of the data we write, and the size of the region we are
+	/// allowed to write to, is a function of the current video mode (see
+	/// `video_get_mode`).
+	///
+	/// This function will return `null` if the BIOS isn't able to support the
+	/// current video mode from its memory reserves. If that happens, you will
+	/// need to use some OS RAM or Application RAM and provide that as a
+	/// framebuffer to `video_set_framebuffer`. The BIOS will always be able
+	/// to provide the 'basic' text buffer experience from reserves, so this
+	/// function will never return `null` on start-up.
+	pub video_get_framebuffer: extern "C" fn() -> *mut u8,
+	/// Set the framebuffer address.
+	///
+	/// Tell the BIOS where it should start fetching pixel or textual data
+	/// from (depending on the current video mode).
+	///
+	/// This value is forgotten after a video mode change and must be
+	/// re-supplied.
+	pub video_set_framebuffer: extern "C" fn(*mut u8) -> crate::Result<()>,
+	/// Find out how large a given region of memory is.
+	///
+	/// The first region is the 'application region' and is defined to always
+	/// start at address `0x2000_0400` (that is, 1 KiB into main SRAM) on a
+	/// standard Cortex-M system. This application region stops just before
+	/// the BIOS reserved memory, at the top of the internal SRAM.
+	///
+	/// Other regions may be located at other addresses (e.g. external DRAM or
+	/// PSRAM).
+	///
+	/// The OS will always load non-relocatable applications into the bottom
+	/// of Region 0. It can allocate OS specific structures from any other
+	/// Region (if any), or from the top of Region 0 (although this reduces
+	/// the maximum application space available). The OS will prefer lower
+	/// numbered regions (other than Region 0), so faster memory should be
+	/// listed first.
+	///
+	/// If the region number given is invalid, the function returns `(null,
+	/// 0)`.
+	pub memory_get_region: extern "C" fn(region: u8) -> (*mut u8, usize),
 }
 
 // End of file

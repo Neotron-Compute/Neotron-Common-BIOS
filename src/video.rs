@@ -31,29 +31,7 @@
 // Constants
 // ============================================================================
 
-/// VGA 80x25 text mode.
-///
-/// This is the classic IBM PC text mode.
-pub const MODE_80X25_TEXT: Mode = Mode::new(Timing::T640x400, Format::Text8x16);
-
-/// VGA 80x30 text mode.
-///
-/// This is the 640x480 graphical mode used for text.
-pub const MODE_80X30_TEXT: Mode = Mode::new(Timing::T640x480, Format::Text8x16);
-
-/// VGA 80x50 text mode.
-pub const MODE_80X50_TEXT: Mode = Mode::new(Timing::T640x400, Format::Text8x8);
-
-/// VGA 80x60 text mode.
-pub const MODE_80X60_TEXT: Mode = Mode::new(Timing::T640x480, Format::Text8x8);
-
-/// Classic QVGA 256 colour graphics
-pub const MODE_320X240_GRAPHICS: Mode =
-	Mode::new_double_height_width(Timing::T640x480, Format::Chunky8);
-
-/// Classic CGA-resolution 256 colour graphics, as used by Doom
-pub const MODE_320X200_GRAPHICS: Mode =
-	Mode::new_double_height_width(Timing::T640x400, Format::Chunky8);
+// None
 
 // ============================================================================
 // Types
@@ -62,7 +40,7 @@ pub const MODE_320X200_GRAPHICS: Mode =
 /// Describes a video mode.
 ///
 /// A Neotron BIOS may support multiple video modes. Each is described using
-/// and instance of this type.
+/// an instance of this type.
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
 pub struct Mode(u8);
@@ -71,20 +49,20 @@ pub struct Mode(u8);
 #[repr(u8)]
 #[derive(Debug, Copy, Clone)]
 pub enum Format {
-	/// Text mode with an 8x8 font.
-	///
-	/// Memory is arranged into `(u8, u8)` units. The first `u8` is the
-	/// character, the second `u8` unit is the foreground/background colour.
-	///
-	/// The font consists of 8px by 8px glyphs.
-	Text8x8 = 0,
 	/// Text mode with an 8x16 font.
 	///
 	/// Memory is arranged into `(u8, u8)` units. The first `u8` is the
 	/// character, the second `u8` unit is the foreground/background colour.
 	///
 	/// The font consists of 8px by 16px glyphs.
-	Text8x16 = 1,
+	Text8x16 = 0,
+	/// Text mode with an 8x8 font.
+	///
+	/// Memory is arranged into `(u8, u8)` units. The first `u8` is the
+	/// character, the second `u8` unit is the foreground/background colour.
+	///
+	/// The font consists of 8px by 8px glyphs.
+	Text8x8 = 1,
 	/// True-colour graphics mode, with 24-bit pixels in 32-bit units.
 	///
 	/// Memory is arranged into `u32` units. Each unit is of the format
@@ -180,14 +158,14 @@ impl Mode {
 	/// If true, this mode is 2x taller than nominal.
 	///
 	/// e.g. a 640x480 mode is dropped to 640x240.
-	pub fn is_vert_2x(self) -> bool {
+	pub const fn is_vert_2x(self) -> bool {
 		(self.0 & (1 << Self::VERT_2X_SHIFT)) != 0
 	}
 
 	/// If true, this mode is 2x wider than nominal.
 	///
 	/// e.g. a 640x480 mode is dropped to 320x480.
-	pub fn is_horiz_2x(self) -> bool {
+	pub const fn is_horiz_2x(self) -> bool {
 		(self.0 & (1 << Self::HORIZ_2X_SHIFT)) != 0
 	}
 
@@ -195,20 +173,37 @@ impl Mode {
 	///
 	/// This could be a line of pixels or a line of characters, depending on
 	/// the mode.
-	pub fn line_size_bytes(self) -> usize {
-		0
+	pub const fn line_size_bytes(self) -> usize {
+		let horizontal_pixels = self.horizontal_pixels() as usize;
+
+		match self.format() {
+			Format::Text8x8 | Format::Text8x16 => (horizontal_pixels / 8) * 2,
+			Format::Chunky32 => horizontal_pixels * 4,
+			Format::Chunky16 => horizontal_pixels * 2,
+			Format::Chunky8 => horizontal_pixels * 1,
+			Format::Chunky4 => horizontal_pixels / 2,
+			Format::Chunky2 => horizontal_pixels / 4,
+			Format::Chunky1 => horizontal_pixels / 8,
+		}
 	}
 
 	/// Gets how big the frame is, in bytes.
-	pub fn frame_size_bytes(self) -> usize {
-		0
+	pub const fn frame_size_bytes(self) -> usize {
+		let line_size = self.line_size_bytes();
+		let num_lines = self.vertical_lines() as usize
+			/ match self.format() {
+				Format::Text8x8 => 8,
+				Format::Text8x16 => 16,
+				_ => 1,
+			};
+		line_size * num_lines
 	}
 
 	/// Get the pixel format for this mode.
-	pub fn format(self) -> Format {
+	pub const fn format(self) -> Format {
 		match (self.0 >> Self::FORMAT_SHIFT) & 0b111 {
-			0 => Format::Text8x8,
-			1 => Format::Text8x16,
+			0 => Format::Text8x16,
+			1 => Format::Text8x8,
 			2 => Format::Chunky32,
 			3 => Format::Chunky16,
 			4 => Format::Chunky8,
@@ -220,8 +215,8 @@ impl Mode {
 	}
 
 	/// Get the timing for this mode.
-	pub fn timing(self) -> Timing {
-		match (self.0 >> Self::FORMAT_SHIFT) & 0b111 {
+	pub const fn timing(self) -> Timing {
+		match (self.0 >> Self::TIMING_SHIFT) & 0b111 {
 			0 => Timing::T640x480,
 			1 => Timing::T640x400,
 			2 => Timing::T800x600,
@@ -233,12 +228,14 @@ impl Mode {
 	///
 	/// The size of the sync pulse and the blanking period is for the BIOS to
 	/// handle internally. The OS only cares about visible pixels.
-	pub fn horizontal_pixels(self) -> u16 {
-		match (self.0 >> Self::TIMING_SHIFT) & 0b111 {
-			0 => 640,
-			1 => 640,
-			2 => 800,
-			_ => 0,
+	pub const fn horizontal_pixels(self) -> u16 {
+		match (self.timing(), self.is_horiz_2x()) {
+			(Timing::T640x480, false) => 640,
+			(Timing::T640x400, false) => 640,
+			(Timing::T800x600, false) => 800,
+			(Timing::T640x480, true) => 320,
+			(Timing::T640x400, true) => 320,
+			(Timing::T800x600, true) => 400,
 		}
 	}
 
@@ -246,19 +243,21 @@ impl Mode {
 	///
 	/// The size of the sync pulse and the blanking period is for the BIOS to
 	/// handle internally. The OS only cares about visible lines.
-	pub fn vertical_lines(self) -> u16 {
-		match (self.0 >> Self::TIMING_SHIFT) & 0b111 {
-			0 => 480,
-			1 => 400,
-			2 => 600,
-			_ => 0,
+	pub const fn vertical_lines(self) -> u16 {
+		match (self.timing(), self.is_vert_2x()) {
+			(Timing::T640x480, false) => 480,
+			(Timing::T640x400, false) => 400,
+			(Timing::T800x600, false) => 600,
+			(Timing::T640x480, true) => 240,
+			(Timing::T640x400, true) => 200,
+			(Timing::T800x600, true) => 300,
 		}
 	}
 
 	/// Get the nominal pixel clock.
 	///
 	/// Note this is only the nominal value. VESA allows +/- 0.5% tolerance.
-	pub fn pixel_clock_hz(self) -> u32 {
+	pub const fn pixel_clock_hz(self) -> u32 {
 		match (self.0 >> Self::TIMING_SHIFT) & 0b111 {
 			0 => 25175000,
 			1 => 25175000,
@@ -270,49 +269,428 @@ impl Mode {
 	/// Get the nominal frame rate.
 	///
 	/// Note this is only the nominal value. VESA allows +/- 0.5% tolerance.
-	pub fn frame_rate_hz(self) -> u32 {
-		match (self.0 >> Self::TIMING_SHIFT) & 0b111 {
-			0 => 60,
-			1 => 70,
-			2 => 60,
-			_ => 0,
+	pub const fn frame_rate_hz(self) -> u32 {
+		match self.timing() {
+			Timing::T640x480 => 60,
+			Timing::T640x400 => 70,
+			Timing::T800x600 => 60,
 		}
 	}
-}
 
-/// Does this Neotron BIOS support this video mode?
-pub fn is_valid_mode(_mode: Mode) -> bool {
-	false
-}
-
-/// Switch to a new video mode.
-///
-/// The contents of the screen are undefined after a call to this function.
-pub fn set_mode(_mode: Mode) -> crate::Result<()> {
-	crate::Result::Err(crate::Error::Unimplemented)
-}
-
-/// Return a pointer to the framebuffer.
-///
-/// In text mode, you do:
-///
-/// ```rust,ignore
-///
-/// let fb = get_framebuffer();
-/// let row = 2;
-/// let col = 9;
-/// let line_size =
-/// fb.add((row * line_size + col) * 2).write(b'A');
-/// fb.add(((row * line_size + col) * 2) + 1).write(0x0F);
-pub fn get_framebuffer() -> *mut u8 {
-	core::ptr::null_mut()
+	/// Get the mode as an integer.
+	pub const fn as_u8(self) -> u8 {
+		self.0
+	}
 }
 
 // ============================================================================
 // Impls
 // ============================================================================
 
-// None
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn mode_vga() {
+		let mode = Mode::new(Timing::T640x480, Format::Text8x16);
+		assert_eq!(0x00, mode.as_u8());
+	}
+
+	#[test]
+	fn mode_sizes() {
+		// These frame size numbers are taken from the Neotron Book.
+		// https://neotron-compute.github.io/Neotron-Book/hardware_soc_video.html
+
+		assert_eq!(
+			Mode::new(Timing::T640x480, Format::Text8x16).frame_size_bytes(),
+			4800
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x480, Format::Text8x8).frame_size_bytes(),
+			9600
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x480, Format::Chunky32).frame_size_bytes(),
+			1228800
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x480, Format::Chunky16).frame_size_bytes(),
+			614400
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x480, Format::Chunky8).frame_size_bytes(),
+			307200
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x480, Format::Chunky4).frame_size_bytes(),
+			153600
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x480, Format::Chunky2).frame_size_bytes(),
+			76800
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x480, Format::Chunky1).frame_size_bytes(),
+			38400
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x400, Format::Text8x16).frame_size_bytes(),
+			4000
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x400, Format::Text8x8).frame_size_bytes(),
+			8000
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x400, Format::Chunky32).frame_size_bytes(),
+			1024000
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x400, Format::Chunky16).frame_size_bytes(),
+			512000
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x400, Format::Chunky8).frame_size_bytes(),
+			256000
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x400, Format::Chunky4).frame_size_bytes(),
+			128000
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x400, Format::Chunky2).frame_size_bytes(),
+			64000
+		);
+		assert_eq!(
+			Mode::new(Timing::T640x400, Format::Chunky1).frame_size_bytes(),
+			32000
+		);
+		assert_eq!(
+			Mode::new(Timing::T800x600, Format::Text8x16).frame_size_bytes(),
+			7400
+		);
+		assert_eq!(
+			Mode::new(Timing::T800x600, Format::Text8x8).frame_size_bytes(),
+			15000
+		);
+		assert_eq!(
+			Mode::new(Timing::T800x600, Format::Chunky32).frame_size_bytes(),
+			1920000
+		);
+		assert_eq!(
+			Mode::new(Timing::T800x600, Format::Chunky16).frame_size_bytes(),
+			960000
+		);
+		assert_eq!(
+			Mode::new(Timing::T800x600, Format::Chunky8).frame_size_bytes(),
+			480000
+		);
+		assert_eq!(
+			Mode::new(Timing::T800x600, Format::Chunky4).frame_size_bytes(),
+			240000
+		);
+		assert_eq!(
+			Mode::new(Timing::T800x600, Format::Chunky2).frame_size_bytes(),
+			120000
+		);
+		assert_eq!(
+			Mode::new(Timing::T800x600, Format::Chunky1).frame_size_bytes(),
+			60000
+		);
+
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x480, Format::Text8x16).frame_size_bytes(),
+			2400,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x480, Format::Text8x8).frame_size_bytes(),
+			4800,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x480, Format::Chunky32).frame_size_bytes(),
+			614400,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x480, Format::Chunky16).frame_size_bytes(),
+			307200,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x480, Format::Chunky8).frame_size_bytes(),
+			153600,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x480, Format::Chunky4).frame_size_bytes(),
+			76800,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x480, Format::Chunky2).frame_size_bytes(),
+			38400,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x480, Format::Chunky1).frame_size_bytes(),
+			19200,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x400, Format::Text8x16).frame_size_bytes(),
+			2000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x400, Format::Text8x8).frame_size_bytes(),
+			4000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x400, Format::Chunky32).frame_size_bytes(),
+			512000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x400, Format::Chunky16).frame_size_bytes(),
+			256000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x400, Format::Chunky8).frame_size_bytes(),
+			128000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x400, Format::Chunky4).frame_size_bytes(),
+			64000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x400, Format::Chunky2).frame_size_bytes(),
+			32000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T640x400, Format::Chunky1).frame_size_bytes(),
+			16000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T800x600, Format::Text8x16).frame_size_bytes(),
+			3700,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T800x600, Format::Text8x8).frame_size_bytes(),
+			7500,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T800x600, Format::Chunky32).frame_size_bytes(),
+			960000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T800x600, Format::Chunky16).frame_size_bytes(),
+			480000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T800x600, Format::Chunky8).frame_size_bytes(),
+			240000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T800x600, Format::Chunky4).frame_size_bytes(),
+			120000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T800x600, Format::Chunky2).frame_size_bytes(),
+			60000,
+		);
+		assert_eq!(
+			Mode::new_double_width(Timing::T800x600, Format::Chunky1).frame_size_bytes(),
+			30000,
+		);
+
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x480, Format::Text8x16).frame_size_bytes(),
+			2400
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x480, Format::Text8x8).frame_size_bytes(),
+			4800
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x480, Format::Chunky32).frame_size_bytes(),
+			614400
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x480, Format::Chunky16).frame_size_bytes(),
+			307200
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x480, Format::Chunky8).frame_size_bytes(),
+			153600
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x480, Format::Chunky4).frame_size_bytes(),
+			76800
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x480, Format::Chunky2).frame_size_bytes(),
+			38400
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x480, Format::Chunky1).frame_size_bytes(),
+			19200
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x400, Format::Text8x16).frame_size_bytes(),
+			1920
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x400, Format::Text8x8).frame_size_bytes(),
+			4000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x400, Format::Chunky32).frame_size_bytes(),
+			512000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x400, Format::Chunky16).frame_size_bytes(),
+			256000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x400, Format::Chunky8).frame_size_bytes(),
+			128000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x400, Format::Chunky4).frame_size_bytes(),
+			64000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x400, Format::Chunky2).frame_size_bytes(),
+			32000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T640x400, Format::Chunky1).frame_size_bytes(),
+			16000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T800x600, Format::Text8x16).frame_size_bytes(),
+			3600
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T800x600, Format::Text8x8).frame_size_bytes(),
+			7400
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T800x600, Format::Chunky32).frame_size_bytes(),
+			960000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T800x600, Format::Chunky16).frame_size_bytes(),
+			480000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T800x600, Format::Chunky8).frame_size_bytes(),
+			240000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T800x600, Format::Chunky4).frame_size_bytes(),
+			120000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T800x600, Format::Chunky2).frame_size_bytes(),
+			60000
+		);
+		assert_eq!(
+			Mode::new_double_height(Timing::T800x600, Format::Chunky1).frame_size_bytes(),
+			30000
+		);
+
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x480, Format::Text8x16).frame_size_bytes(),
+			1200
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x480, Format::Text8x8).frame_size_bytes(),
+			2400
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x480, Format::Chunky32).frame_size_bytes(),
+			307200
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x480, Format::Chunky16).frame_size_bytes(),
+			153600
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x480, Format::Chunky8).frame_size_bytes(),
+			76800
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x480, Format::Chunky4).frame_size_bytes(),
+			38400
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x480, Format::Chunky2).frame_size_bytes(),
+			19200
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x480, Format::Chunky1).frame_size_bytes(),
+			9600
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x400, Format::Text8x16).frame_size_bytes(),
+			960
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x400, Format::Text8x8).frame_size_bytes(),
+			2000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x400, Format::Chunky32).frame_size_bytes(),
+			256000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x400, Format::Chunky16).frame_size_bytes(),
+			128000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x400, Format::Chunky8).frame_size_bytes(),
+			64000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x400, Format::Chunky4).frame_size_bytes(),
+			32000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x400, Format::Chunky2).frame_size_bytes(),
+			16000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T640x400, Format::Chunky1).frame_size_bytes(),
+			8000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T800x600, Format::Text8x16).frame_size_bytes(),
+			1800
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T800x600, Format::Text8x8).frame_size_bytes(),
+			3700
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T800x600, Format::Chunky32).frame_size_bytes(),
+			480000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T800x600, Format::Chunky16).frame_size_bytes(),
+			240000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T800x600, Format::Chunky8).frame_size_bytes(),
+			120000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T800x600, Format::Chunky4).frame_size_bytes(),
+			60000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T800x600, Format::Chunky2).frame_size_bytes(),
+			30000
+		);
+		assert_eq!(
+			Mode::new_double_height_width(Timing::T800x600, Format::Chunky1).frame_size_bytes(),
+			15000
+		);
+	}
+}
 
 // ============================================================================
 // End of File
