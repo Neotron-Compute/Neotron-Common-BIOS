@@ -180,7 +180,7 @@ impl Mode {
 			Format::Text8x8 | Format::Text8x16 => (horizontal_pixels / 8) * 2,
 			Format::Chunky32 => horizontal_pixels * 4,
 			Format::Chunky16 => horizontal_pixels * 2,
-			Format::Chunky8 => horizontal_pixels * 1,
+			Format::Chunky8 => horizontal_pixels,
 			Format::Chunky4 => horizontal_pixels / 2,
 			Format::Chunky2 => horizontal_pixels / 4,
 			Format::Chunky1 => horizontal_pixels / 8,
