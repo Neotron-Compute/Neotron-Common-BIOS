@@ -187,6 +187,25 @@ impl Mode {
 		}
 	}
 
+	/// Gets how big a line is in glyph-attribute pairs.
+	pub const fn text_width(self) -> Option<u16> {
+		let horizontal_pixels = self.horizontal_pixels();
+
+		match self.format() {
+			Format::Text8x8 | Format::Text8x16 => Some(horizontal_pixels / 8),
+			_ => None,
+		}
+	}
+
+	/// Gets how many rows of text are on screen.
+	pub const fn text_height(self) -> Option<u16> {
+		match self.format() {
+			Format::Text8x8 => Some(self.vertical_lines() / 8),
+			Format::Text8x16 => Some(self.vertical_lines() / 16),
+			_ => None,
+		}
+	}
+
 	/// Gets how big the frame is, in bytes.
 	pub const fn frame_size_bytes(self) -> usize {
 		let line_size = self.line_size_bytes();

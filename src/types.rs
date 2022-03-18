@@ -123,7 +123,7 @@ pub struct Time {
 	/// Seconds since the epoch
 	pub secs: u32,
 	/// Nanoseconds since the last second rolled over
-	pub nsecs: u32
+	pub nsecs: u32,
 }
 
 // ============================================================================
@@ -298,10 +298,7 @@ impl From<&Time> for chrono::DateTime<chrono::Utc> {
 	fn from(time: &Time) -> Self {
 		use chrono::prelude::*;
 		let our_epoch = Utc.ymd(2001, 1, 1).and_hms(0, 0, 0).timestamp();
-		chrono::Utc.timestamp(
-			i64::from(time.secs) + our_epoch,
-			time.nsecs
-		)
+		chrono::Utc.timestamp(i64::from(time.secs) + our_epoch, time.nsecs)
 	}
 }
 
