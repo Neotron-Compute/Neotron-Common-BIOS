@@ -120,11 +120,10 @@ pub struct ApiBuffer<'a> {
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct Time {
-	/// Seconds since 2000-01-01T00:00:00Z
-	pub seconds_since_epoch: u32,
-	/// Number of 60 Hz frames that have elapsed since the current second
-	/// began [0..59].
-	pub frames_since_second: u8,
+	/// Seconds since the epoch
+	pub secs: u32,
+	/// Nanoseconds since the last second rolled over
+	pub nsecs: u32,
 }
 
 // ============================================================================
@@ -290,13 +289,16 @@ impl<'a> From<&'a mut [u8]> for ApiBuffer<'a> {
 
 impl core::fmt::Display for Time {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
+		let timestamp: chrono::DateTime<chrono::Utc> = self.into();
+		write!(f, "{}", timestamp)
+	}
+}
+
+impl From<&Time> for chrono::DateTime<chrono::Utc> {
+	fn from(time: &Time) -> Self {
 		use chrono::prelude::*;
 		let our_epoch = Utc.ymd(2001, 1, 1).and_hms(0, 0, 0).timestamp();
-		let time = chrono::Utc.timestamp(
-			i64::from(self.seconds_since_epoch) + our_epoch,
-			((u32::from(self.frames_since_second) * 1_000_000) / 60) * 1_000,
-		);
-		write!(f, "{}", time)
+		chrono::Utc.timestamp(i64::from(time.secs) + our_epoch, time.nsecs)
 	}
 }
 

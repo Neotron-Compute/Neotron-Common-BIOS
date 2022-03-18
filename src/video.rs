@@ -42,7 +42,7 @@
 /// A Neotron BIOS may support multiple video modes. Each is described using
 /// an instance of this type.
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Mode(u8);
 
 /// Describes the format of the video memory.
@@ -184,6 +184,25 @@ impl Mode {
 			Format::Chunky4 => horizontal_pixels / 2,
 			Format::Chunky2 => horizontal_pixels / 4,
 			Format::Chunky1 => horizontal_pixels / 8,
+		}
+	}
+
+	/// Gets how big a line is in glyph-attribute pairs.
+	pub const fn text_width(self) -> Option<u16> {
+		let horizontal_pixels = self.horizontal_pixels();
+
+		match self.format() {
+			Format::Text8x8 | Format::Text8x16 => Some(horizontal_pixels / 8),
+			_ => None,
+		}
+	}
+
+	/// Gets how many rows of text are on screen.
+	pub const fn text_height(self) -> Option<u16> {
+		match self.format() {
+			Format::Text8x8 => Some(self.vertical_lines() / 8),
+			Format::Text8x16 => Some(self.vertical_lines() / 16),
+			_ => None,
 		}
 	}
 
