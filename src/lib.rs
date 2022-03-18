@@ -172,7 +172,7 @@ pub struct Api {
 	///
 	/// If the region number given is invalid, the function returns `(null,
 	/// 0)`.
-	pub memory_get_region: extern "C" fn(region: u8) -> (*mut u8, usize),
+	pub memory_get_region: extern "C" fn(region: u8, out_start: *mut *mut u8, out_len: *mut usize) -> crate::Result<()>,
 }
 
 // End of file
