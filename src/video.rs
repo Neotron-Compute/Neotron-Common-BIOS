@@ -42,7 +42,7 @@
 /// A Neotron BIOS may support multiple video modes. Each is described using
 /// an instance of this type.
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Mode(u8);
 
 /// Describes the format of the video memory.
