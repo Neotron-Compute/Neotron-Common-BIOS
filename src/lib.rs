@@ -147,18 +147,28 @@ pub struct Api {
 	pub video_get_framebuffer: extern "C" fn() -> *mut u8,
 	/// Set the framebuffer address.
 	///
-	/// Tell the BIOS where it should start fetching pixel or textual data
-	/// from (depending on the current video mode).
+	/// Tell the BIOS where it should start fetching pixel or textual data from
+	/// (depending on the current video mode).
 	///
 	/// This value is forgotten after a video mode change and must be
 	/// re-supplied.
-	pub video_set_framebuffer: extern "C" fn(*mut u8) -> crate::Result<()>,
-	/// Find out how large a given region of memory is.
 	///
-	/// The first region is the 'application region' and is defined to always
-	/// start at address `0x2000_0400` (that is, 1 KiB into main SRAM) on a
-	/// standard Cortex-M system. This application region stops just before
-	/// the BIOS reserved memory, at the top of the internal SRAM.
+	/// Once the BIOS has handed over to the OS, it will never write to video
+	/// memory, only read.
+	///
+	/// # Safety
+	///
+	/// The region pointed to by `start_address` must be large enough to contain
+	/// however much video memory is required by both the current video mode,
+	/// and whatever video modes you subsequently change into.
+	pub video_set_framebuffer: unsafe extern "C" fn(start_address: *const u8) -> crate::Result<()>,
+	/// Find out about regions of memory in the system.
+	///
+	/// The first region (index `0`) must be the 'application region' which is
+	/// defined to always start at address `0x2000_0400` (that is, 1 KiB into
+	/// main SRAM) on a standard Cortex-M system. This application region stops
+	/// just before the BIOS reserved memory, typically at the top of the
+	/// internal SRAM.
 	///
 	/// Other regions may be located at other addresses (e.g. external DRAM or
 	/// PSRAM).

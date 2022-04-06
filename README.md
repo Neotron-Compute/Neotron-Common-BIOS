@@ -42,6 +42,8 @@ dual licensed as above, without any additional terms or conditions.
 ### Unreleased Changes
 
 * Changed `memory_get_region` to return a `MemoryRegion`
+* Changed `video_set_framebuffer` to take a `*const u8` not `*mut u8` - as the
+  BIOS doesn't change video RAM.
 
 ### v0.3.0
 
