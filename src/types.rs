@@ -126,6 +126,28 @@ pub struct Time {
 	pub nsecs: u32,
 }
 
+/// The kinds of memory we know about
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub enum MemoryKind {
+	/// Read-write memory
+	Ram,
+	/// Read-only memory
+	Rom,
+}
+
+/// Represents a region in memory.
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct MemoryRegion {
+	/// The address the region starts at
+	pub start: *mut u8,
+	/// The length of the region
+	pub length: usize,
+	/// The kind of memory found at this region
+	pub kind: MemoryKind,
+}
+
 // ============================================================================
 // Impls
 // ============================================================================
@@ -299,6 +321,35 @@ impl From<&Time> for chrono::DateTime<chrono::Utc> {
 		use chrono::prelude::*;
 		let our_epoch = Utc.ymd(2001, 1, 1).and_hms(0, 0, 0).timestamp();
 		chrono::Utc.timestamp(i64::from(time.secs) + our_epoch, time.nsecs)
+	}
+}
+
+// MemoryKind
+
+impl core::fmt::Display for MemoryKind {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		write!(
+			f,
+			"{}",
+			match self {
+				MemoryKind::Rom => "ROM",
+				MemoryKind::Ram => "RAM",
+			}
+		)
+	}
+}
+
+// MemoryRegion
+
+impl core::fmt::Display for MemoryRegion {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		write!(
+			f,
+			"{} KiB {} @ {:p}",
+			self.length / 1024,
+			self.kind,
+			self.start
+		)
 	}
 }
 
