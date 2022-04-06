@@ -31,7 +31,7 @@ pub use types::*;
 pub use version::Version;
 
 /// BIOS API semantic version for the API defined in this crate.
-pub const API_VERSION: Version = Version::new(0, 3, 0);
+pub const API_VERSION: Version = Version::new(0, 4, 0);
 
 /// The BIOS API.
 ///
