@@ -163,20 +163,12 @@ pub struct Api {
 	/// Other regions may be located at other addresses (e.g. external DRAM or
 	/// PSRAM).
 	///
-	/// The OS will always load non-relocatable applications into the bottom
-	/// of Region 0. It can allocate OS specific structures from any other
-	/// Region (if any), or from the top of Region 0 (although this reduces
-	/// the maximum application space available). The OS will prefer lower
-	/// numbered regions (other than Region 0), so faster memory should be
-	/// listed first.
-	///
-	/// If the region number given is invalid, the function returns `(null,
-	/// 0)`.
-	pub memory_get_region: extern "C" fn(
-		region: u8,
-		out_start: *mut *mut u8,
-		out_len: *mut usize,
-	) -> crate::Result<()>,
+	/// The OS will always load non-relocatable applications into the bottom of
+	/// Region 0. It can allocate OS specific structures from any other Region
+	/// (if any), or from the top of Region 0 (although this reduces the maximum
+	/// application space available). The OS will prefer lower numbered regions
+	/// (other than Region 0), so faster memory should be listed first.
+	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Result<types::MemoryRegion>,
 }
 
 // End of file

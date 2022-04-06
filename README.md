@@ -36,3 +36,13 @@ This BIOS API crate is a work in progress.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+
+## Changelog
+
+### Unreleased Changes
+
+* Changed `memory_get_region` to return a `MemoryRegion`
+
+### v0.3.0
+
+* First published version. `Cargo.toml` reports at `0.1.0`.
