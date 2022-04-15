@@ -35,10 +35,10 @@
 // Types
 // ============================================================================
 
-/// The kinds of block device we support.
+/// The types of block device we support.
 #[repr(C)]
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum Kind {
+pub enum DeviceType {
 	/// An *SD* Card
 	SecureDigitalCard,
 	/// A Hard Drive
@@ -53,20 +53,23 @@ pub enum Kind {
 #[repr(C)]
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct DeviceInfo {
+	/// Some human-readable name for this serial device (e.g. `SdCard0` or
+	/// `CF1`)
+	pub name: crate::ApiString<'static>,
 	/// The kind of block device this is.
-	kind: Kind,
+	pub device_type: DeviceType,
 	/// The size of an addressable block, in bytes.
-	block_size: u32,
+	pub block_size: u32,
 	/// The total number of addressable blocks.
-	num_blocks: u64,
+	pub num_blocks: u64,
 	/// Can this device be ejected?
-	ejectable: bool,
+	pub ejectable: bool,
 	/// Can this device be removed?
-	removable: bool,
+	pub removable: bool,
 	/// Does this have media in it right now?
-	media_present: bool,
+	pub media_present: bool,
 	/// Is this media read-only?
-	read_only: bool,
+	pub read_only: bool,
 }
 
 // ============================================================================
