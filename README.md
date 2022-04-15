@@ -43,6 +43,18 @@ dual licensed as above, without any additional terms or conditions.
 
 * None
 
+### v0.5.0
+
+* Added `serial_read` API
+* Added `video_mode_needs_vram` API
+* Added `hid_get_event` API
+* Added `hid_set_leds` API
+* Added `video_wait_for_line` API
+* Added `block_dev_get_info` API
+* Added `block_write` API
+* Added `block_read` API
+* Added `block_verify` API
+
 ### v0.4.0
 
 * Changed `memory_get_region` to return a `MemoryRegion`
