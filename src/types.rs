@@ -3,23 +3,21 @@
 //! Contains types used in the Neotron API.
 //!
 //! Note that all types in this file *must* be `#[repr(C)]` and ABI stable.
-//!
-//! ## License
-//!
-//! > Copyright (C) The Neotron Developers, 2019-2022
-//! >
-//! > This program is free software: you can redistribute it and/or modify
-//! > it under the terms of the GNU General Public License as published by
-//! > the Free Software Foundation, either version 3 of the License, or
-//! > at your option) any later version.
-//! >
-//! > This program is distributed in the hope that it will be useful,
-//! > but WITHOUT ANY WARRANTY; without even the implied warranty of
-//! > MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//! > GNU General Public License for more details.
-//! >
-//! > You should have received a copy of the GNU General Public License
-//! > along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// Copyright (C) The Neotron Developers, 2019-2022
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // ============================================================================
 // Imports
@@ -42,7 +40,7 @@
 pub type OsStartFn = extern "C" fn(&crate::Api) -> !;
 
 /// Any API function which can return an error, uses this error type.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum Error {
 	/// An invalid device number was given to the function.
@@ -55,6 +53,10 @@ pub enum Error {
 	/// The underlying hardware could not accept the given configuration. The
 	/// numeric code is BIOS implementation specific but may give some clues.
 	UnsupportedConfiguration(u16),
+	/// You used a Block Device API but there was no media in the drive
+	NoMediaFound,
+	/// You used a Block Device API asked for a block the device doesn't have
+	BlockOutOfBounds,
 }
 
 /// All API functions which can fail return this type. We don't use the
@@ -86,7 +88,7 @@ pub struct Timeout(u32);
 /// A Rust UTF-8 string, but compatible with FFI. Assume the lifetime is only
 /// valid until the callee returns to the caller. Is not null-terminated.
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ApiString<'a>(ApiByteSlice<'a>);
 
 /// A Rust u8 slice, but compatible with FFI. Assume the lifetime is only valid
@@ -124,6 +126,28 @@ pub struct Time {
 	pub secs: u32,
 	/// Nanoseconds since the last second rolled over
 	pub nsecs: u32,
+}
+
+/// The kinds of memory we know about
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub enum MemoryKind {
+	/// Read-write memory
+	Ram,
+	/// Read-only memory
+	Rom,
+}
+
+/// Represents a region in memory.
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct MemoryRegion {
+	/// The address the region starts at
+	pub start: *mut u8,
+	/// The length of the region
+	pub length: usize,
+	/// The kind of memory found at this region
+	pub kind: MemoryKind,
 }
 
 // ============================================================================
@@ -237,6 +261,42 @@ impl<'a> From<&'a [u8]> for ApiByteSlice<'a> {
 	}
 }
 
+impl<'a> core::cmp::PartialEq for ApiByteSlice<'a> {
+	/// Check if two ApiByteSlices are equal.
+	///
+	/// We just make some actual slices and compare then.
+	fn eq(&self, rhs: &Self) -> bool {
+		if self.data_len != rhs.data_len {
+			return false;
+		}
+		let this_slice = self.as_slice();
+		let that_slice = rhs.as_slice();
+		this_slice == that_slice
+	}
+}
+
+impl<'a> core::cmp::Eq for ApiByteSlice<'a> {}
+
+impl<'a> core::cmp::Ord for ApiByteSlice<'a> {
+	/// Compare two ApiByteSlices.
+	///
+	/// We just make some actual slices and compare then.
+	fn cmp(&self, rhs: &Self) -> core::cmp::Ordering {
+		let this_slice = self.as_slice();
+		let that_slice = rhs.as_slice();
+		this_slice.cmp(that_slice)
+	}
+}
+
+impl<'a> core::cmp::PartialOrd for ApiByteSlice<'a> {
+	/// Compare two ApiByteSlices.
+	///
+	/// We are `Ord` so we can defer to that.
+	fn partial_cmp(&self, rhs: &Self) -> core::option::Option<core::cmp::Ordering> {
+		Some(self.cmp(rhs))
+	}
+}
+
 // ApiBuffer
 
 impl<'a> ApiBuffer<'a> {
@@ -299,6 +359,35 @@ impl From<&Time> for chrono::DateTime<chrono::Utc> {
 		use chrono::prelude::*;
 		let our_epoch = Utc.ymd(2001, 1, 1).and_hms(0, 0, 0).timestamp();
 		chrono::Utc.timestamp(i64::from(time.secs) + our_epoch, time.nsecs)
+	}
+}
+
+// MemoryKind
+
+impl core::fmt::Display for MemoryKind {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		write!(
+			f,
+			"{}",
+			match self {
+				MemoryKind::Rom => "ROM",
+				MemoryKind::Ram => "RAM",
+			}
+		)
+	}
+}
+
+// MemoryRegion
+
+impl core::fmt::Display for MemoryRegion {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		write!(
+			f,
+			"{} KiB {} @ {:p}",
+			self.length / 1024,
+			self.kind,
+			self.start
+		)
 	}
 }
 
