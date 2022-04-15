@@ -88,7 +88,7 @@ pub struct Timeout(u32);
 /// A Rust UTF-8 string, but compatible with FFI. Assume the lifetime is only
 /// valid until the callee returns to the caller. Is not null-terminated.
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ApiString<'a>(ApiByteSlice<'a>);
 
 /// A Rust u8 slice, but compatible with FFI. Assume the lifetime is only valid
@@ -258,6 +258,42 @@ impl<'a> From<&'a [u8]> for ApiByteSlice<'a> {
 	/// Convert from a Rust byte slice into an FFI compatible byte slice
 	fn from(input: &'a [u8]) -> ApiByteSlice<'a> {
 		ApiByteSlice::new(input)
+	}
+}
+
+impl<'a> core::cmp::PartialEq for ApiByteSlice<'a> {
+	/// Check if two ApiByteSlices are equal.
+	///
+	/// We just make some actual slices and compare then.
+	fn eq(&self, rhs: &Self) -> bool {
+		if self.data_len != rhs.data_len {
+			return false;
+		}
+		let this_slice = self.as_slice();
+		let that_slice = rhs.as_slice();
+		this_slice == that_slice
+	}
+}
+
+impl<'a> core::cmp::Eq for ApiByteSlice<'a> {}
+
+impl<'a> core::cmp::Ord for ApiByteSlice<'a> {
+	/// Compare two ApiByteSlices.
+	///
+	/// We just make some actual slices and compare then.
+	fn cmp(&self, rhs: &Self) -> core::cmp::Ordering {
+		let this_slice = self.as_slice();
+		let that_slice = rhs.as_slice();
+		this_slice.cmp(that_slice)
+	}
+}
+
+impl<'a> core::cmp::PartialOrd for ApiByteSlice<'a> {
+	/// Compare two ApiByteSlices.
+	///
+	/// We are `Ord` so we can defer to that.
+	fn partial_cmp(&self, rhs: &Self) -> core::option::Option<core::cmp::Ordering> {
+		Some(self.cmp(rhs))
 	}
 }
 
