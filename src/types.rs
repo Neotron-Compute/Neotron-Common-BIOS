@@ -3,23 +3,21 @@
 //! Contains types used in the Neotron API.
 //!
 //! Note that all types in this file *must* be `#[repr(C)]` and ABI stable.
-//!
-//! ## License
-//!
-//! > Copyright (C) The Neotron Developers, 2019-2022
-//! >
-//! > This program is free software: you can redistribute it and/or modify
-//! > it under the terms of the GNU General Public License as published by
-//! > the Free Software Foundation, either version 3 of the License, or
-//! > at your option) any later version.
-//! >
-//! > This program is distributed in the hope that it will be useful,
-//! > but WITHOUT ANY WARRANTY; without even the implied warranty of
-//! > MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//! > GNU General Public License for more details.
-//! >
-//! > You should have received a copy of the GNU General Public License
-//! > along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// Copyright (C) The Neotron Developers, 2019-2022
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // ============================================================================
 // Imports
@@ -42,7 +40,7 @@
 pub type OsStartFn = extern "C" fn(&crate::Api) -> !;
 
 /// Any API function which can return an error, uses this error type.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum Error {
 	/// An invalid device number was given to the function.
@@ -55,6 +53,10 @@ pub enum Error {
 	/// The underlying hardware could not accept the given configuration. The
 	/// numeric code is BIOS implementation specific but may give some clues.
 	UnsupportedConfiguration(u16),
+	/// You used a Block Device API but there was no media in the drive
+	NoMediaFound,
+	/// You used a Block Device API asked for a block the device doesn't have
+	BlockOutOfBounds,
 }
 
 /// All API functions which can fail return this type. We don't use the

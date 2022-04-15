@@ -22,6 +22,12 @@
 #![no_std]
 #![deny(missing_docs)]
 
+// ============================================================================
+// Imports
+// ============================================================================
+
+pub mod block_dev;
+pub mod hid;
 pub mod serial;
 pub mod types;
 pub mod version;
@@ -30,8 +36,16 @@ pub mod video;
 pub use types::*;
 pub use version::Version;
 
+// ============================================================================
+// Constants
+// ============================================================================
+
 /// BIOS API semantic version for the API defined in this crate.
 pub const API_VERSION: Version = Version::new(0, 4, 0);
+
+// ============================================================================
+// Types
+// ============================================================================
 
 /// The BIOS API.
 ///
@@ -79,6 +93,17 @@ pub struct Api {
 		data: ApiByteSlice,
 		timeout: crate::Option<Timeout>,
 	) -> crate::Result<usize>,
+	/// Read bytes from a serial port. There is no sense of 'opening'
+	/// or 'closing' the device - serial devices are always open. If the
+	/// return value is `Ok(n)`, the value `n` may be less than the size of
+	/// the given buffer. If so, that means not all of the requested data
+	/// could be received - only the first `n` bytes were (and hence only the
+	/// first `n` bytes of the given buffer now contain data).
+	pub serial_read: extern "C" fn(
+		device: u8,
+		data: ApiBuffer,
+		timeout: crate::Option<Timeout>,
+	) -> crate::Result<usize>,
 	/// Get the current wall time.
 	///
 	/// The Neotron BIOS does not understand time zones, leap-seconds or the
@@ -115,6 +140,9 @@ pub struct Api {
 	pub configuration_set: extern "C" fn(buffer: ApiByteSlice) -> crate::Result<()>,
 	/// Does this Neotron BIOS support this video mode?
 	pub video_is_valid_mode: extern "C" fn(mode: video::Mode) -> bool,
+	/// Does this Neotron BIOS require extra VRAM (passed with
+	/// `video_set_framebuffer`) before this mode will work?
+	pub video_mode_needs_vram: extern "C" fn(mode: video::Mode) -> bool,
 	/// Switch to a new video mode.
 	///
 	/// The contents of the screen are undefined after a call to this function.
@@ -179,6 +207,98 @@ pub struct Api {
 	/// application space available). The OS will prefer lower numbered regions
 	/// (other than Region 0), so faster memory should be listed first.
 	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Result<types::MemoryRegion>,
+	/// Get the next available HID event, if any.
+	///
+	/// This function doesn't block. It will return `Ok(None)` if there is no event ready.
+	pub hid_get_event: extern "C" fn() -> crate::Result<crate::Option<hid::HidEvent>>,
+	/// Control the keyboard LEDs.
+	pub hid_set_leds: extern "C" fn(hid::KeyboardLeds) -> crate::Result<()>,
+	/// Wait for the next occurence of the specified video scan-line.
+	///
+	/// In general we must assume that the video memory is read top-to-bottom
+	/// as the picture is being drawn on the monitor (e.g. via a VGA video
+	/// signal). If you modify video memory during this *drawing period*
+	/// there is a risk that the image on the monitor (however briefly) may
+	/// contain some parts from before the modification and some parts from
+	/// after. This can given rise to the *tearing effect* where it looks
+	/// like the screen has been torn (or ripped) across because there is a
+	/// discontinuity part-way through the image.
+	///
+	/// This function busy-waits until the video drawing has reached a
+	/// specified scan-line on the video frame.
+	///
+	/// There is no error code here. If the line you ask for is beyond the
+	/// number of visible scan-lines in the current video mode, it waits util
+	/// the last visible scan-line is complete.
+	///
+	/// If you wait for the last visible line until drawing, you stand the
+	/// best chance of your pixels operations on the video RAM being
+	/// completed before scan-lines start being sent to the monitor for the
+	/// next frame.
+	///
+	/// You can also use this for a crude `16.7 ms` delay but note that
+	/// some video modes run at `70 Hz` and so this would then give you a
+	/// `14.3ms` second delay.
+	pub video_wait_for_line: extern "C" fn(line: u16),
+	/// Get information about the Block Devices in the system.
+	///
+	/// Block Devices are also known as *disk drives*. They can be read from
+	/// (and often written to) but only in units called *blocks* or *sectors*.
+	///
+	/// The BIOS should enumerate removable devices first, followed by fixed
+	/// devices.
+	///
+	/// The set of devices is not expected to change at run-time - removal of
+	/// media is indicated with a boolean field in the
+	/// `block_dev::DeviceInfo` structure.
+	pub block_dev_get_info: extern "C" fn(device: u8) -> crate::Option<block_dev::DeviceInfo>,
+	/// Write one or more sectors to a block device.
+	///
+	/// The function will block until all data is written. The array pointed
+	/// to by `data` must be `num_blocks * block_size` in length, where
+	/// `block_size` is given by `block_dev_get_info`.
+	///
+	/// There are no requirements on the alignment of `data` but if it is
+	/// aligned, the BIOS may be able to use a higher-performance code path.
+	pub block_write: extern "C" fn(
+		device: u8,
+		block: u64,
+		num_blocks: u8,
+		data: ApiByteSlice,
+	) -> crate::Result<()>,
+	/// Read one or more sectors to a block device.
+	///
+	/// The function will block until all data is read. The array pointed
+	/// to by `data` must be `num_blocks * block_size` in length, where
+	/// `block_size` is given by `block_dev_get_info`.
+	///
+	/// There are no requirements on the alignment of `data` but if it is
+	/// aligned, the BIOS may be able to use a higher-performance code path.
+	pub block_read:
+		extern "C" fn(device: u8, block: u64, num_blocks: u8, data: ApiBuffer) -> crate::Result<()>,
+	/// Verify one or more sectors on a block device (that is read them and
+	/// check they match the given data).
+	///
+	/// The function will block until all data is verified. The array pointed
+	/// to by `data` must be `num_blocks * block_size` in length, where
+	/// `block_size` is given by `block_dev_get_info`.
+	///
+	/// There are no requirements on the alignment of `data` but if it is
+	/// aligned, the BIOS may be able to use a higher-performance code path.
+	pub block_verify: extern "C" fn(
+		device: u8,
+		block: u64,
+		num_blocks: u8,
+		data: ApiByteSlice,
+	) -> crate::Result<()>,
 }
 
-// End of file
+// ============================================================================
+// Impls
+// ============================================================================
+
+// None
+
+// ============================================================================
+// End of File
+// ============================================================================
