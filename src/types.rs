@@ -42,7 +42,7 @@
 pub type OsStartFn = extern "C" fn(&crate::Api) -> !;
 
 /// Any API function which can return an error, uses this error type.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum Error {
 	/// An invalid device number was given to the function.
@@ -55,6 +55,10 @@ pub enum Error {
 	/// The underlying hardware could not accept the given configuration. The
 	/// numeric code is BIOS implementation specific but may give some clues.
 	UnsupportedConfiguration(u16),
+	/// You used a Block Device API but there was no media in the drive
+	NoMediaFound,
+	/// You used a Block Device API asked for a block the device doesn't have
+	BlockOutOfBounds,
 }
 
 /// All API functions which can fail return this type. We don't use the
