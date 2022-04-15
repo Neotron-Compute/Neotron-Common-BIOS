@@ -1,23 +1,37 @@
 //! # Version
 //!
 //! Contains the version API.
-//!
-//! ## License
-//!
-//! > Copyright (C) The Neotron Developers, 2019-2022
-//! >
-//! > This program is free software: you can redistribute it and/or modify
-//! > it under the terms of the GNU General Public License as published by
-//! > the Free Software Foundation, either version 3 of the License, or
-//! > at your option) any later version.
-//! >
-//! > This program is distributed in the hope that it will be useful,
-//! > but WITHOUT ANY WARRANTY; without even the implied warranty of
-//! > MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//! > GNU General Public License for more details.
-//! >
-//! > You should have received a copy of the GNU General Public License
-//! > along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// Copyright (C) The Neotron Developers, 2019-2022
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// ============================================================================
+// Imports
+// ============================================================================
+
+// None
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+// None
+
+// ============================================================================
+// Types
+// ============================================================================
 
 /// Describes a semantic version.
 ///
@@ -26,6 +40,10 @@
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
 pub struct Version(pub u32);
+
+// ============================================================================
+// Impls
+// ============================================================================
 
 impl Version {
 	/// Create a new Version.
@@ -49,4 +67,6 @@ impl Version {
 	}
 }
 
-// End of file
+// ============================================================================
+// End of File
+// ============================================================================
