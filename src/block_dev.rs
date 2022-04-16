@@ -53,7 +53,7 @@ pub enum DeviceType {
 #[repr(C)]
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct DeviceInfo {
-	/// Some human-readable name for this serial device (e.g. `SdCard0` or
+	/// Some human-readable name for this block device (e.g. `SdCard0` or
 	/// `CF1`)
 	pub name: crate::ApiString<'static>,
 	/// The kind of block device this is.
