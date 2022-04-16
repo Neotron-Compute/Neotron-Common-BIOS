@@ -28,6 +28,7 @@
 
 pub mod block_dev;
 pub mod hid;
+pub mod i2c;
 pub mod serial;
 pub mod types;
 pub mod version;
@@ -290,6 +291,34 @@ pub struct Api {
 		block: u64,
 		num_blocks: u8,
 		data: ApiByteSlice,
+	) -> crate::Result<()>,
+	/// Get information about the I²C Buses in the system.
+	///
+	/// I²C Bus 0 should be the one connected to the Neotron Bus.
+	/// I²C Bus 1 is typically the VGA DDC bus.
+	pub i2c_bus_get_info: extern "C" fn(i2c_bus: u8) -> crate::Option<i2c::BusInfo>,
+	/// Transact with a I²C Device on an I²C Bus
+	///
+	/// * `i2c_bus` - Which I²C Bus to use
+	/// * `i2c_device_address` - The 7-bit I²C Device Address
+	/// * `tx` - the first list of bytes to send (use `&[]` if not required)
+	/// * `tx2` - the second (and optional) list of bytes to send (use `&[]` if not required)
+	/// * `rx` - the buffer to fill with read data (use `&mut []` if not required)
+	///
+	/// ```ignore
+	/// // Read 16 bytes from the start of an EEPROM with device address 0x65 on Bus 0
+	/// let mut buf = [0u8; 16];
+	/// (api.i2c_write_read)(0, 0x65, &[0x00, 0x00], &[], &mut buf)?;
+	/// // Write those bytes to somewhere else in an EEPROM with device address 0x65 on Bus 0
+	/// // You can see now why it's useful to have *two* TX buffers available
+	/// (api.i2c_write_read)(0, 0x65, &[0x00, 0x10], &buf, &mut [])?;
+	/// ```
+	pub i2c_write_read: extern "C" fn(
+		i2c_bus: u8,
+		i2c_device_address: u8,
+		tx: ApiByteSlice,
+		tx2: ApiByteSlice,
+		rx: ApiBuffer,
 	) -> crate::Result<()>,
 }
 
