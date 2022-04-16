@@ -26,6 +26,7 @@
 // Imports
 // ============================================================================
 
+pub mod audio;
 pub mod block_dev;
 pub mod hid;
 pub mod i2c;
@@ -320,6 +321,88 @@ pub struct Api {
 		tx2: ApiByteSlice,
 		rx: ApiBuffer,
 	) -> crate::Result<()>,
+	/// Get information about the Audio Mixer channels
+	pub audio_mixer_channel_get_info:
+		extern "C" fn(audio_mixer_id: u8) -> crate::Result<audio::MixerChannelInfo>,
+	/// Set an Audio Mixer level
+	pub audio_mixer_channel_set_level:
+		extern "C" fn(audio_mixer_id: u8, level: u8) -> crate::Result<()>,
+	/// Configure the audio output.
+	///
+	/// If accepted, the audio output FIFO is flushed and the changes apply
+	/// immediately. If not accepted, an error is returned.
+	///
+	/// It is not currently possible to enumerate all the possible sample
+	/// rates - you just have to try a variety of well know configurations to
+	/// see which ones work.
+	///
+	/// Note that if your desired sample rate cannot be exactly accepted, but
+	/// is within some tolerance, this function will still succeed. Therefore
+	/// you should call `audio_output_get_config` to get the precise sample
+	/// rate that the system is actually using if that matters to your
+	/// application. For example, you might ask for 48,000 Hz but due to the
+	/// system clock frequency and other factors, a sample rate of 48,018 Hz
+	/// might actually be achieved.
+	pub audio_output_set_config: extern "C" fn(config: audio::Config) -> crate::Result<()>,
+	/// Get the audio output's current configuration.
+	pub audio_output_get_config: extern "C" fn() -> crate::Result<audio::Config>,
+	/// Send audio samples to the output FIFO.
+	///
+	/// The format of the samples (little-endian, 16-bit, etc), depends on the
+	/// current output configuration. Note that the slice is in *bytes* and
+	/// there will be between *one* and *four* bytes per sample depending on
+	/// the format.
+	///
+	/// This function won't block, but it will return how much data was
+	/// accepted. The given samples will be copied and so the buffer is free
+	/// to re-use once the function returns.
+	///
+	/// If the buffer underflows, silence is played out. There is only one
+	/// hardware output stream so any mixing has to be performed in software
+	/// by the OS.
+	pub audio_output_data: unsafe extern "C" fn(samples: ApiByteSlice) -> crate::Result<usize>,
+	/// Get audio buffer space.
+	///
+	/// How many samples in the current format can be sent to
+	/// `audio_output_data` without blocking?
+	pub audio_output_get_space: extern "C" fn() -> crate::Result<usize>,
+	/// Configure the audio input.
+	///
+	/// If accepted, the audio input FIFO is flushed and the changes apply
+	/// immediately. If not accepted, an error is returned.
+	///
+	/// It is not currently possible to enumerate all the possible sample
+	/// rates - you just have to try a variety of well know configurations to
+	/// see which ones work.
+	///
+	/// Note that if your desired sample rate cannot be exactly accepted, but
+	/// is within some tolerance, this function will still succeed. Therefore
+	/// you should call `audio_output_get_config` to get the precise sample
+	/// rate that the system is actually using if that matters to your
+	/// application. For example, you might ask for 48,000 Hz but due to the
+	/// system clock frequency and other factors, a sample rate of 48,018 Hz
+	/// might actually be achieved.
+	pub audio_input_set_config: extern "C" fn(config: audio::Config) -> crate::Result<()>,
+	/// Get the audio input's current configuration.
+	pub audio_input_get_config: extern "C" fn() -> crate::Result<audio::Config>,
+	/// Get 16-bit stereo audio from the input FIFO.
+	///
+	/// The format of the samples (little-endian, 16-bit, etc), depends on the
+	/// current output configuration. Note that the slice is in *bytes* and
+	/// there will be between *one* and *four* bytes per sample depending on
+	/// the format.
+	///
+	/// This function won't block, but it will return how much data was
+	/// actually written to the buffer.
+	///
+	/// If you don't call it often enough, there will be a buffer overflow and
+	/// audio will be dropped.
+	pub audio_input_data: unsafe extern "C" fn(samples: ApiBuffer) -> crate::Result<usize>,
+	/// Get audio buffer space.
+	///
+	/// How many samples in the current format can be read right now using
+	/// `audio_input_data`?
+	pub audio_input_get_count: extern "C" fn() -> crate::Result<usize>,
 }
 
 // ============================================================================
