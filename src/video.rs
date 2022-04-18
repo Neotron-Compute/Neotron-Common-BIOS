@@ -360,6 +360,11 @@ impl Mode {
 	}
 
 	/// Make a mode from an integer.
+	///
+	/// # Safety
+	///
+	/// The integer `mode_value` must represent a valid mode, as returned from
+	/// `Mode::as_u8`. This function does not validate the given value.
 	pub unsafe fn from_u8(mode_value: u8) -> Mode {
 		Mode(mode_value)
 	}
