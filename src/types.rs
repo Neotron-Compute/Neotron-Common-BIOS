@@ -83,6 +83,7 @@ pub enum Option<T> {
 
 /// Describes a period of time, after which the BIOS should give up.
 #[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Timeout(u32);
 
 /// A Rust UTF-8 string, but compatible with FFI. Assume the lifetime is only
@@ -183,6 +184,23 @@ impl<T> Option<T> {
 }
 
 // Timeout
+impl Timeout {
+	/// Create a new timeout, in milliseconds.
+	pub fn new_ms(milliseconds: u32) -> Timeout {
+		Timeout(milliseconds)
+	}
+
+	/// Create a new timeout, in seconds.
+	pub fn new_secs(seconds: u16) -> Timeout {
+		let milliseconds = u32::from(seconds) * 1000;
+		Self::new_ms(milliseconds)
+	}
+
+	/// Get the timeout, in milliseconds
+	pub fn get_ms(self) -> u32 {
+		self.0
+	}
+}
 
 // ApiString
 
@@ -224,14 +242,19 @@ impl core::fmt::Display for ApiString<'_> {
 // ApiByteSlice
 
 impl<'a> ApiByteSlice<'a> {
-	/// Create a new byte slice we can send over the FFI. NB: By doing this Rust
-	/// can't track lifetimes any more.
+	/// Create a new byte slice we can send over the FFI.
 	pub fn new(s: &'a [u8]) -> ApiByteSlice<'a> {
 		ApiByteSlice {
 			data: s.as_ptr(),
 			data_len: s.len(),
 			_phantom: core::marker::PhantomData,
 		}
+	}
+
+	/// Make an empty slice.
+	pub fn empty() -> ApiByteSlice<'static> {
+		static EMPTY: &[u8] = &[];
+		ApiByteSlice::new(EMPTY)
 	}
 
 	/// Turn this byte slice into a Rust byte slice.
@@ -313,14 +336,33 @@ impl<'a> ApiBuffer<'a> {
 		}
 	}
 
+	/// Make an empty slice.
+	pub fn empty() -> ApiBuffer<'static> {
+		ApiBuffer {
+			data: core::ptr::null_mut(),
+			data_len: 0,
+			_phantom: core::marker::PhantomData,
+		}
+	}
+
 	/// Turn this buffer into a Rust byte slice.
 	pub fn as_slice(&self) -> &[u8] {
-		unsafe { core::slice::from_raw_parts(self.data, self.data_len) }
+		if self.data.is_null() {
+			&[]
+		} else {
+			unsafe { core::slice::from_raw_parts(self.data, self.data_len) }
+		}
 	}
 
 	/// Turn this buffer into a Rust mutable byte slice.
-	pub fn as_mut_slice(&mut self) -> &mut [u8] {
-		unsafe { core::slice::from_raw_parts_mut(self.data, self.data_len) }
+	///
+	/// You will get `None` if the buffer is empty (i.e. has zero length).
+	pub fn as_mut_slice(&mut self) -> core::option::Option<&mut [u8]> {
+		if self.data.is_null() {
+			None
+		} else {
+			Some(unsafe { core::slice::from_raw_parts_mut(self.data, self.data_len) })
+		}
 	}
 }
 
