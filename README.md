@@ -43,6 +43,15 @@ dual licensed as above, without any additional terms or conditions.
 
 * None
 
+### v0.6.0
+
+* Removed 'block_X' APIs
+* Added 'bus_X' APIs
+* Added 'audio_X' APIs
+* Added 'i2c_X' APIs
+* Added 'video_get/set_palette' APIs
+* Added 'delay' API
+
 ### v0.5.0
 
 * Added `serial_read` API
