@@ -36,6 +36,8 @@
 // ============================================================================
 
 /// Describes an I²C Bus
+#[repr(C)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BusInfo {
 	/// Some human-readable name for this I²C device (e.g. `I²C0` or
 	/// `DDC0`)

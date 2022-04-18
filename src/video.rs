@@ -47,7 +47,7 @@ pub struct Mode(u8);
 
 /// Describes the format of the video memory.
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Format {
 	/// Text mode with an 8x16 font.
 	///
@@ -97,7 +97,7 @@ pub enum Format {
 
 /// Describes the timing of the video signal.
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Timing {
 	/// VGA Standard 640x480 @ 60Hz.
 	///

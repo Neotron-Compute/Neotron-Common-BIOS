@@ -83,6 +83,7 @@ pub enum Option<T> {
 
 /// Describes a period of time, after which the BIOS should give up.
 #[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Timeout(u32);
 
 /// A Rust UTF-8 string, but compatible with FFI. Assume the lifetime is only
@@ -183,6 +184,23 @@ impl<T> Option<T> {
 }
 
 // Timeout
+impl Timeout {
+	/// Create a new timeout, in milliseconds.
+	pub fn new_ms(milliseconds: u32) -> Timeout {
+		Timeout(milliseconds)
+	}
+
+	/// Create a new timeout, in seconds.
+	pub fn new_secs(seconds: u16) -> Timeout {
+		let milliseconds = u32::from(seconds) * 1000;
+		Self::new_ms(milliseconds)
+	}
+
+	/// Get the timeout, in milliseconds
+	pub fn get_ms(self) -> u32 {
+		self.0
+	}
+}
 
 // ApiString
 
@@ -224,14 +242,19 @@ impl core::fmt::Display for ApiString<'_> {
 // ApiByteSlice
 
 impl<'a> ApiByteSlice<'a> {
-	/// Create a new byte slice we can send over the FFI. NB: By doing this Rust
-	/// can't track lifetimes any more.
+	/// Create a new byte slice we can send over the FFI.
 	pub fn new(s: &'a [u8]) -> ApiByteSlice<'a> {
 		ApiByteSlice {
 			data: s.as_ptr(),
 			data_len: s.len(),
 			_phantom: core::marker::PhantomData,
 		}
+	}
+
+	/// Make an empty slice.
+	pub fn empty() -> ApiByteSlice<'static> {
+		static EMPTY: &[u8] = &[];
+		ApiByteSlice::new(EMPTY)
 	}
 
 	/// Turn this byte slice into a Rust byte slice.

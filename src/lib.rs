@@ -49,7 +49,7 @@ pub const API_VERSION: Version = Version::new(0, 5, 0);
 // Types
 // ============================================================================
 
-/// The BIOS API.
+/// The BIOS API, expressed as a structure of function pointers.
 ///
 /// All Neotron BIOSes should provide this structure to the OS initialisation
 /// function.

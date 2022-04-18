@@ -36,8 +36,8 @@
 // ============================================================================
 
 /// Defines the format of each sample (mono, stereo, 8-bit, 16-bit, etc).
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SampleFormat {
 	/// 8-bit, signed, mono samples.
 	EightBitMono,
@@ -50,16 +50,28 @@ pub enum SampleFormat {
 }
 
 /// Configuration for an Audio Output or Input
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
 	/// What format are the samples
 	pub sample_format: SampleFormat,
-	/// How many samples per second (e.g. 48,000)?
+	/// How many samples are there per second (e.g. 48,000)?
+	///
+	/// Supported values are likely to include some of the following:
+	///
+	/// * 8,000 Hz (Telephone/Voice)
+	/// * 11,025 Hz (CD Audio / 4)
+	/// * 16,000 Hz (DVD Audio / 3)
+	/// * 22,050 Hz (CD Audio / 2)
+	/// * 24,000 Hz (DVD Audio / 2)
+	/// * 44,100 Hz (CD Audio)
+	/// * 48,000 Hz (DVD Audio)
 	pub sample_rate_hz: u32,
 }
 
 /// Describes the direction audio is flowing, for a given Audio Mixer Channel.
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Direction {
 	/// Audio In, e.g. Line-In
 	Input,
@@ -72,15 +84,18 @@ pub enum Direction {
 /// Describes an Audio Mixer Channel.
 ///
 /// For example "Line In", or "PCM Output"
+#[repr(C)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MixerChannelInfo {
-	/// The name of this Audio Mixer Channel
+	/// The name of this Audio Mixer Channel (e.g. `Line In`)
 	pub name: crate::ApiString<'static>,
 	/// Is this an Input or an Output?
 	pub direction: Direction,
-	/// What value of `current_level` gives the loudest audio? All values above this will be equally loud.
+	/// What value of `current_level` gives the loudest audio? All values
+	/// equal to, or above, this value will be equally and maximally loud.
 	pub max_level: u8,
 	/// What is the current volume level for this Audio Mixer Channel, on a
-	/// scale of `0` to `max_level`.
+	/// scale of `0` to `max_level`. A value of `0` mutes the channel.
 	pub current_level: u8,
 }
 
