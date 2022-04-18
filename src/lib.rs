@@ -228,7 +228,7 @@ pub struct Api {
 	///
 	/// If you ask for an entry that is beyond the capabilities of the current
 	/// video mode, you get `None`.
-	pub video_get_palette: extern "C" fn (palette_idx: u8) -> crate::Option<video::RGBColour>,
+	pub video_get_palette: extern "C" fn(palette_idx: u8) -> crate::Option<video::RGBColour>,
 	/// Set an entry in the colour palette.
 	///
 	/// Almost all video modes (except `Chunky16` and `Chunky32`) use a video
@@ -237,7 +237,7 @@ pub struct Api {
 	///
 	/// If you set an entry beyond what the current mode supports, the value
 	/// is ignored.
-	pub video_set_palette: extern "C" fn (palette_idx: u8, video::RGBColour),
+	pub video_set_palette: extern "C" fn(palette_idx: u8, video::RGBColour),
 	/// Sets all the entries in the colour palette at once.
 	///
 	/// Almost all video modes (except `Chunky16` and `Chunky32`) use a video
@@ -253,7 +253,8 @@ pub struct Api {
 	/// The value `start` must point to an array of `RGBColour` of length
 	/// `length`.
 	///
-	pub video_set_whole_palette: unsafe extern "C" fn (start: *const video::RGBColour, length: usize),
+	pub video_set_whole_palette:
+		unsafe extern "C" fn(start: *const video::RGBColour, length: usize),
 	/// Find out about regions of memory in the system.
 	///
 	/// The first region (index `0`) must be the 'application region' which is

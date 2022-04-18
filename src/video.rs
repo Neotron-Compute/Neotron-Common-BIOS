@@ -116,7 +116,6 @@ pub enum Timing {
 	T800x600 = 2,
 }
 
-
 /// Describes an RGB colour-triple.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
