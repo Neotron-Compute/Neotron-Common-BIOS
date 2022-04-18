@@ -26,10 +26,8 @@
 // Imports
 // ============================================================================
 
-pub mod audio;
-pub mod bus;
+pub mod block_dev;
 pub mod hid;
-pub mod i2c;
 pub mod serial;
 pub mod types;
 pub mod version;
@@ -49,7 +47,7 @@ pub const API_VERSION: Version = Version::new(0, 5, 0);
 // Types
 // ============================================================================
 
-/// The BIOS API, expressed as a structure of function pointers.
+/// The BIOS API.
 ///
 /// All Neotron BIOSes should provide this structure to the OS initialisation
 /// function.
@@ -177,22 +175,44 @@ pub struct Api {
 	pub video_get_framebuffer: extern "C" fn() -> *mut u8,
 	/// Set the framebuffer address.
 	///
-	/// Tell the BIOS where it should start fetching pixel or textual data
-	/// from(depending on the current video mode). This pointer is retained
-	/// and the memory is continually acccessed after this function call ends.
+	/// Tell the BIOS where it should start fetching pixel or textual data from
+	/// (depending on the current video mode).
 	///
 	/// This value is forgotten after a video mode change and must be
 	/// re-supplied.
 	///
-	/// Once the BIOS has handed over to the OS, it will never write to this
-	/// video memory, only read from it.
+	/// Once the BIOS has handed over to the OS, it will never write to video
+	/// memory, only read.
 	///
 	/// # Safety
 	///
-	/// The region pointed to by `start_address` must be large enough to
-	/// contain however much video memory is required by both the current
-	/// video mode.
+	/// The region pointed to by `start_address` must be large enough to contain
+	/// however much video memory is required by both the current video mode,
+	/// and whatever video modes you subsequently change into.
 	pub video_set_framebuffer: unsafe extern "C" fn(start_address: *const u8) -> crate::Result<()>,
+	/// Find out about regions of memory in the system.
+	///
+	/// The first region (index `0`) must be the 'application region' which is
+	/// defined to always start at address `0x2000_0400` (that is, 1 KiB into
+	/// main SRAM) on a standard Cortex-M system. This application region stops
+	/// just before the BIOS reserved memory, typically at the top of the
+	/// internal SRAM.
+	///
+	/// Other regions may be located at other addresses (e.g. external DRAM or
+	/// PSRAM).
+	///
+	/// The OS will always load non-relocatable applications into the bottom of
+	/// Region 0. It can allocate OS specific structures from any other Region
+	/// (if any), or from the top of Region 0 (although this reduces the maximum
+	/// application space available). The OS will prefer lower numbered regions
+	/// (other than Region 0), so faster memory should be listed first.
+	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Result<types::MemoryRegion>,
+	/// Get the next available HID event, if any.
+	///
+	/// This function doesn't block. It will return `Ok(None)` if there is no event ready.
+	pub hid_get_event: extern "C" fn() -> crate::Result<crate::Option<hid::HidEvent>>,
+	/// Control the keyboard LEDs.
+	pub hid_set_leds: extern "C" fn(hid::KeyboardLeds) -> crate::Result<()>,
 	/// Wait for the next occurence of the specified video scan-line.
 	///
 	/// In general we must assume that the video memory is read top-to-bottom
@@ -220,276 +240,64 @@ pub struct Api {
 	/// some video modes run at `70 Hz` and so this would then give you a
 	/// `14.3ms` second delay.
 	pub video_wait_for_line: extern "C" fn(line: u16),
-	/// Get an entry from the colour palette.
+	/// Get information about the Block Devices in the system.
 	///
-	/// Almost all video modes (except `Chunky16` and `Chunky32`) use a video
-	/// palette. This function returns the RGB colour for a given palette
-	/// index.
+	/// Block Devices are also known as *disk drives*. They can be read from
+	/// (and often written to) but only in units called *blocks* or *sectors*.
 	///
-	/// If you ask for an entry that is beyond the capabilities of the current
-	/// video mode, you get `None`.
-	pub video_get_palette: extern "C" fn(palette_idx: u8) -> crate::Option<video::RGBColour>,
-	/// Set an entry in the colour palette.
+	/// The BIOS should enumerate removable devices first, followed by fixed
+	/// devices.
 	///
-	/// Almost all video modes (except `Chunky16` and `Chunky32`) use a video
-	/// palette. This function changes the RGB colour for a given palette
-	/// index.
+	/// The set of devices is not expected to change at run-time - removal of
+	/// media is indicated with a boolean field in the
+	/// `block_dev::DeviceInfo` structure.
+	pub block_dev_get_info: extern "C" fn(device: u8) -> crate::Option<block_dev::DeviceInfo>,
+	/// Write one or more sectors to a block device.
 	///
-	/// If you set an entry beyond what the current mode supports, the value
-	/// is ignored.
-	pub video_set_palette: extern "C" fn(palette_idx: u8, video::RGBColour),
-	/// Sets all the entries in the colour palette at once.
+	/// The function will block until all data is written. The array pointed
+	/// to by `data` must be `num_blocks * block_size` in length, where
+	/// `block_size` is given by `block_dev_get_info`.
 	///
-	/// Almost all video modes (except `Chunky16` and `Chunky32`) use a video
-	/// palette. This function changes all the RGB colours in the current
-	/// palette.
-	///
-	/// If you pass a `len` beyond what the current mode supports, the extra
-	/// values are ignored. The given buffer is copied so it doesn't need to
-	/// live beyond this function call.
-	///
-	/// # Safety
-	///
-	/// The value `start` must point to an array of `RGBColour` of length
-	/// `length`.
-	///
-	pub video_set_whole_palette:
-		unsafe extern "C" fn(start: *const video::RGBColour, length: usize),
-	/// Find out about regions of memory in the system.
-	///
-	/// The first region (index `0`) must be the 'application region' which is
-	/// defined to always start at address `0x2000_0400` (that is, 1 KiB into
-	/// main SRAM) on a standard Cortex-M system. This application region stops
-	/// just before the BIOS reserved memory, typically at the top of the
-	/// internal SRAM.
-	///
-	/// Other regions may be located at other addresses (e.g. external DRAM or
-	/// PSRAM).
-	///
-	/// The OS will always load non-relocatable applications into the bottom of
-	/// Region 0. It can allocate OS specific structures from any other Region
-	/// (if any), or from the top of Region 0 (although this reduces the maximum
-	/// application space available). The OS will prefer lower numbered regions
-	/// (other than Region 0), so faster memory should be listed first.
-	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Result<types::MemoryRegion>,
-	/// Get the next available HID event, if any.
-	///
-	/// This function doesn't block. It will return `Ok(None)` if there is no event ready.
-	pub hid_get_event: extern "C" fn() -> crate::Result<crate::Option<hid::HidEvent>>,
-	/// Control the keyboard LEDs.
-	pub hid_set_leds: extern "C" fn(leds: hid::KeyboardLeds) -> crate::Result<()>,
-	/// Get information about the I²C Buses in the system.
-	///
-	/// I²C Bus 0 should be the one connected to the Neotron Bus.
-	/// I²C Bus 1 is typically the VGA DDC bus.
-	pub i2c_bus_get_info: extern "C" fn(i2c_bus: u8) -> crate::Option<i2c::BusInfo>,
-	/// Transact with a I²C Device on an I²C Bus
-	///
-	/// * `i2c_bus` - Which I²C Bus to use
-	/// * `i2c_device_address` - The 7-bit I²C Device Address
-	/// * `tx` - the first list of bytes to send (use `ApiByteSlice::empty()` if not required)
-	/// * `tx2` - the second (and optional) list of bytes to send (use `ApiByteSlice::empty()` if not required)
-	/// * `rx` - the buffer to fill with read data (use `ApiBuffer::empty()` if not required)
-	///
-	/// ```no_run
-	/// # let api = neotron_common_bios::Api::make_dummy_api().unwrap();
-	/// # use neotron_common_bios::{ApiByteSlice, ApiBuffer};
-	/// // Read 16 bytes from the start of an EEPROM with device address 0x65 on Bus 0
-	/// let mut buf = [0u8; 16];
-	/// let _ = (api.i2c_write_read)(0, 0x65, ApiByteSlice::new(&[0x00, 0x00]), ApiByteSlice::empty(), ApiBuffer::new(&mut buf));
-	/// // Write those bytes to somewhere else in an EEPROM with device address 0x65 on Bus 0
-	/// // You can see now why it's useful to have *two* TX buffers available
-	/// let _ = (api.i2c_write_read)(0, 0x65, ApiByteSlice::new(&[0x00, 0x10]), ApiByteSlice::new(&buf), ApiBuffer::empty());
-	/// # Ok::<(), neotron_common_bios::Error>(())
-	/// ```
-	pub i2c_write_read: extern "C" fn(
-		i2c_bus: u8,
-		i2c_device_address: u8,
-		tx: ApiByteSlice,
-		tx2: ApiByteSlice,
-		rx: ApiBuffer,
+	/// There are no requirements on the alignment of `data` but if it is
+	/// aligned, the BIOS may be able to use a higher-performance code path.
+	pub block_write: extern "C" fn(
+		device: u8,
+		block: u64,
+		num_blocks: u8,
+		data: ApiByteSlice,
 	) -> crate::Result<()>,
-	/// Get information about the Audio Mixer channels
-	pub audio_mixer_channel_get_info:
-		extern "C" fn(audio_mixer_id: u8) -> crate::Result<audio::MixerChannelInfo>,
-	/// Set an Audio Mixer level
-	pub audio_mixer_channel_set_level:
-		extern "C" fn(audio_mixer_id: u8, level: u8) -> crate::Result<()>,
-	/// Configure the audio output.
+	/// Read one or more sectors to a block device.
 	///
-	/// If accepted, the audio output FIFO is flushed and the changes apply
-	/// immediately. If not accepted, an error is returned.
+	/// The function will block until all data is read. The array pointed
+	/// to by `data` must be `num_blocks * block_size` in length, where
+	/// `block_size` is given by `block_dev_get_info`.
 	///
-	/// It is not currently possible to enumerate all the possible sample
-	/// rates - you just have to try a variety of well know configurations to
-	/// see which ones work.
+	/// There are no requirements on the alignment of `data` but if it is
+	/// aligned, the BIOS may be able to use a higher-performance code path.
+	pub block_read:
+		extern "C" fn(device: u8, block: u64, num_blocks: u8, data: ApiBuffer) -> crate::Result<()>,
+	/// Verify one or more sectors on a block device (that is read them and
+	/// check they match the given data).
 	///
-	/// Note that if your desired sample rate cannot be exactly accepted, but
-	/// is within some tolerance, this function will still succeed. Therefore
-	/// you should call `audio_output_get_config` to get the precise sample
-	/// rate that the system is actually using if that matters to your
-	/// application. For example, you might ask for 48,000 Hz but due to the
-	/// system clock frequency and other factors, a sample rate of 48,018 Hz
-	/// might actually be achieved. Regardless, to avoid buffer underflows
-	/// you should supply as many samples as `audio_output_get_space` says
-	/// you need, not what you think you need based on the sample rate you
-	/// think you have.
-	pub audio_output_set_config: extern "C" fn(config: audio::Config) -> crate::Result<()>,
-	/// Get the audio output's current configuration.
-	pub audio_output_get_config: extern "C" fn() -> crate::Result<audio::Config>,
-	/// Send audio samples to the output FIFO.
+	/// The function will block until all data is verified. The array pointed
+	/// to by `data` must be `num_blocks * block_size` in length, where
+	/// `block_size` is given by `block_dev_get_info`.
 	///
-	/// The format of the samples (little-endian, 16-bit, etc), depends on the
-	/// current output configuration. Note that the slice is in *bytes* and
-	/// there will be between *one* and *four* bytes per sample depending on
-	/// the format.
-	///
-	/// This function won't block, but it will return how much data was
-	/// accepted. The given samples will be copied and so the buffer is free
-	/// to re-use once the function returns. To avoid buffer underflows you
-	/// should supply as many samples as `audio_output_get_space` says you
-	/// need, not what you think you need based on the sample rate you think
-	/// you have (as there will always be some error margin on that).
-	///
-	/// If the buffer underflows, silence is played out.
-	///
-	/// There is only one hardware output stream so any mixing has to be
-	/// performed in software by the OS.
-	pub audio_output_data: unsafe extern "C" fn(samples: ApiByteSlice) -> crate::Result<usize>,
-	/// Get audio buffer space.
-	///
-	/// How many samples in the current format can be sent to
-	/// `audio_output_data` without blocking?
-	pub audio_output_get_space: extern "C" fn() -> crate::Result<usize>,
-	/// Configure the audio input.
-	///
-	/// If accepted, the audio input FIFO is flushed and the changes apply
-	/// immediately. If not accepted, an error is returned.
-	///
-	/// It is not currently possible to enumerate all the possible sample
-	/// rates - you just have to try a variety of well know configurations to
-	/// see which ones work.
-	///
-	/// Note that if your desired sample rate cannot be exactly accepted, but
-	/// is within some tolerance, this function will still succeed. Therefore
-	/// you should call `audio_output_get_config` to get the precise sample
-	/// rate that the system is actually using if that matters to your
-	/// application. For example, you might ask for 48,000 Hz but due to the
-	/// system clock frequency and other factors, a sample rate of 48,018 Hz
-	/// might actually be achieved.
-	pub audio_input_set_config: extern "C" fn(config: audio::Config) -> crate::Result<()>,
-	/// Get the audio input's current configuration.
-	pub audio_input_get_config: extern "C" fn() -> crate::Result<audio::Config>,
-	/// Get 16-bit stereo audio from the input FIFO.
-	///
-	/// The format of the samples (little-endian, 16-bit, etc), depends on the
-	/// current output configuration. Note that the slice is in *bytes* and
-	/// there will be between *one* and *four* bytes per sample depending on
-	/// the format.
-	///
-	/// This function won't block, but it will return how much data was
-	/// actually written to the buffer.
-	///
-	/// If you don't call it often enough, there will be a buffer overflow and
-	/// audio will be dropped.
-	pub audio_input_data: unsafe extern "C" fn(samples: ApiBuffer) -> crate::Result<usize>,
-	/// Get audio buffer space.
-	///
-	/// How many samples in the current format can be read right now using
-	/// `audio_input_data`?
-	pub audio_input_get_count: extern "C" fn() -> crate::Result<usize>,
-	/// Select a Neotron Bus Peripheral. This drives the SPI chip-select line
-	/// low for that peripheral. Selecting a peripheral de-selects any other
-	/// peripherals. Select peripheral 'None' to select no peripherals. If
-	/// you lock the bus then interrupt routines that need the bus are
-	/// blocked and must be deferred. Therefore you should try and release
-	/// the bus whilst waiting for things to happen (if your peripheral can
-	/// tolerate the CS line being de-activated at that time).
-	pub bus_select: extern "C" fn(peripheral_id: crate::Option<u8>),
-	/// Find out some details about each particular Neotron Bus Peripheral.
-	pub bus_get_info: extern "C" fn(peripheral_id: u8) -> crate::Option<bus::PeripheralInfo>,
-	/// Transact with the currently selected Neotron Bus Peripheral.
-	///
-	/// You should select a peripheral with `bus_select` first,
-	/// however you can send unselected traffic (e.g. to configure an SD Card
-	/// into SPI mode).
-	///
-	/// * `tx` - the first list of bytes to send (use `&[]` if not required)
-	/// * `tx2` - the second (and optional) list of bytes to send (use `&[]` if not required)
-	/// * `rx` - the buffer to fill with read data (use `&mut []` if not required)
-	///
-	/// Because SPI is full-duplex, we discard incoming bytes during the TX
-	/// portion. We must also clock out *something* during the RX portion,
-	/// and we chose `0xFF` bytes. If that doesn't work, use `bus_exchange`.
-	///
-	/// ```no_run
-	/// # let api = neotron_common_bios::Api::make_dummy_api().unwrap();
-	/// # use neotron_common_bios::{ApiByteSlice, ApiBuffer};
-	/// // Grab Peripheral 1 on the bus
-	/// let _ = (api.bus_select)(neotron_common_bios::Option::Some(1));
-	/// // Read 16 bytes from Register 0 of the selected peripheral
-	/// let mut buf = [0u8; 16];
-	/// let _ = (api.bus_write_read)(ApiByteSlice::new(&[0, 16]), ApiByteSlice::empty(), ApiBuffer::new(&mut buf));
-	/// // Write those bytes to Register 2. You can see now why it's useful to
-	/// // have *two* TX buffers in the API
-	/// let _ = (api.bus_write_read)(ApiByteSlice::new(&[2, 16]), ApiByteSlice::new(&buf), ApiBuffer::empty());
-	/// // Release the bus
-	/// let _ = (api.bus_select)(neotron_common_bios::Option::None);
-	/// # Ok::<(), neotron_common_bios::Error>(())
-	/// ```
-	pub bus_write_read:
-		extern "C" fn(tx: ApiByteSlice, tx2: ApiByteSlice, rx: ApiBuffer) -> crate::Result<()>,
-	/// Exchange bytes with the currently selected Neotron Bus Peripheral.
-	///
-	/// You should select a peripheral with `bus_select` first,
-	/// however you can send unselected traffic (e.g. to configure an SD Card
-	/// into SPI mode).
-	///
-	/// SPI is full-duplex, and this routine clocks out the bytes in `buffer`
-	/// one at a time, and replaces them with the bytes received from the
-	/// peripheral.
-	///
-	/// ```no_run
-	/// # let api = neotron_common_bios::Api::make_dummy_api().unwrap();
-	/// # use neotron_common_bios::{ApiByteSlice, ApiBuffer};
-	/// // Grab Peripheral 1 on the bus
-	/// let _ = (api.bus_select)(neotron_common_bios::Option::Some(1));
-	/// // Exchange four bytes with the peripheral
-	/// let mut buf = [0, 1, 2, 3];
-	/// let _ = (api.bus_exchange)(ApiBuffer::new(&mut buf));
-	/// // buf now contains whatever the peripheral sent us.
-	/// // Release the bus
-	/// let _ = (api.bus_select)(neotron_common_bios::Option::None);
-	/// # Ok::<(), neotron_common_bios::Error>(())
-	/// ```
-	pub bus_exchange: extern "C" fn(buffer: ApiBuffer) -> crate::Result<()>,
-	/// Busy-waits for a period of time.
-	///
-	/// This is better than spinning in a loop a million times as:
-	///
-	/// a) deferred interrupts can be processed
-	/// b) the timing is based on clock frequency and so relatively accurate.
-	///
-	/// If you are drawing to the screen, you may want `Api::video_wait_for_line` instead.
-	///
-	/// If you want to delay for long periods, track the wall-clock time
-	/// instead.
-	pub delay: extern "C" fn(timeout: Timeout),
+	/// There are no requirements on the alignment of `data` but if it is
+	/// aligned, the BIOS may be able to use a higher-performance code path.
+	pub block_verify: extern "C" fn(
+		device: u8,
+		block: u64,
+		num_blocks: u8,
+		data: ApiByteSlice,
+	) -> crate::Result<()>,
 }
 
 // ============================================================================
 // Impls
 // ============================================================================
 
-impl Api {
-	/// This function only exists to make the doctests compile.
-	///
-	/// It always returns `None`.
-	#[doc(hidden)]
-	pub fn make_dummy_api() -> core::option::Option<Api> {
-		None
-	}
-}
+// None
 
 // ============================================================================
 // End of File

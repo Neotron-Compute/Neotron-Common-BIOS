@@ -47,7 +47,7 @@ pub struct Mode(u8);
 
 /// Describes the format of the video memory.
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone)]
 pub enum Format {
 	/// Text mode with an 8x16 font.
 	///
@@ -97,7 +97,7 @@ pub enum Format {
 
 /// Describes the timing of the video signal.
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone)]
 pub enum Timing {
 	/// VGA Standard 640x480 @ 60Hz.
 	///
@@ -114,63 +114,6 @@ pub enum Timing {
 	/// Has a 40.000 MHz pixel clock and a 37.9 kHz horizontal scan rate - but
 	/// a specific implementation may differ.
 	T800x600 = 2,
-}
-
-/// Describes an RGB colour-triple.
-#[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct RGBColour(u32);
-
-impl RGBColour {
-	/// The colour Red
-	pub const RED: RGBColour = RGBColour::from_rgb(0xFF, 0, 0);
-	/// The colour Green
-	pub const GREEN: RGBColour = RGBColour::from_rgb(0, 0xFF, 0);
-	/// The colour Blue
-	pub const BLUE: RGBColour = RGBColour::from_rgb(0, 0, 0xFF);
-	/// The colour Yellow
-	pub const YELLOW: RGBColour = RGBColour::from_rgb(0xFF, 0xFF, 0);
-	/// The colour White
-	pub const WHITE: RGBColour = RGBColour::from_rgb(0xFF, 0xFF, 0xFF);
-	/// The colour Black
-	pub const BLACK: RGBColour = RGBColour::from_rgb(0, 0, 0);
-	/// The colour Cyan
-	pub const CYAN: RGBColour = RGBColour::from_rgb(0, 0xFF, 0xFF);
-	/// The colour Magenta
-	pub const MAGENTA: RGBColour = RGBColour::from_rgb(0xFF, 0, 0xFF);
-
-	/// Create a new RGB colour from a packed 32-bit value
-	pub const fn from_packed(packed: u32) -> RGBColour {
-		RGBColour(packed)
-	}
-
-	/// Get a packed 32-bit value from this RGB Colour
-	pub const fn as_packed(self) -> u32 {
-		self.0
-	}
-
-	/// Create a new RGB colour
-	pub const fn from_rgb(red: u8, green: u8, blue: u8) -> RGBColour {
-		let mut colour = (red as u32) << 16;
-		colour |= (green as u32) << 8;
-		colour |= blue as u32;
-		RGBColour(colour)
-	}
-
-	/// Get the red-channel value
-	pub const fn red(self) -> u8 {
-		((self.0 >> 16) & 0xFF) as u8
-	}
-
-	/// Get the green-channel value
-	pub const fn green(self) -> u8 {
-		((self.0 >> 8) & 0xFF) as u8
-	}
-
-	/// Get the blue-channel value
-	pub const fn blue(self) -> u8 {
-		(self.0 & 0xFF) as u8
-	}
 }
 
 // ============================================================================
@@ -356,16 +299,6 @@ impl Mode {
 	/// Get the mode as an integer.
 	pub const fn as_u8(self) -> u8 {
 		self.0
-	}
-
-	/// Make a mode from an integer.
-	///
-	/// # Safety
-	///
-	/// The integer `mode_value` must represent a valid mode, as returned from
-	/// `Mode::as_u8`. This function does not validate the given value.
-	pub unsafe fn from_u8(mode_value: u8) -> Mode {
-		Mode(mode_value)
 	}
 }
 

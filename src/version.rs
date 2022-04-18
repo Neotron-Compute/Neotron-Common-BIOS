@@ -38,7 +38,7 @@
 /// The version is internally stored as a 32-bit value, but comprises an 8-bit
 /// major version, and 8-bit minor version and an 8-bit patch version.
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug)]
 pub struct Version(pub u32);
 
 // ============================================================================
