@@ -43,6 +43,10 @@ dual licensed as above, without any additional terms or conditions.
 
 * None
 
+### v0.6.1
+
+* No changes - v0.6.0 release was incorrect so re-releasing
+
 ### v0.6.0
 
 * Removed 'block_X' APIs
