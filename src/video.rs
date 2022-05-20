@@ -121,57 +121,35 @@ pub enum Timing {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct RGBColour(u32);
 
-impl RGBColour {
-	/// The colour Red
-	pub const RED: RGBColour = RGBColour::from_rgb(0xFF, 0, 0);
-	/// The colour Green
-	pub const GREEN: RGBColour = RGBColour::from_rgb(0, 0xFF, 0);
-	/// The colour Blue
-	pub const BLUE: RGBColour = RGBColour::from_rgb(0, 0, 0xFF);
-	/// The colour Yellow
-	pub const YELLOW: RGBColour = RGBColour::from_rgb(0xFF, 0xFF, 0);
-	/// The colour White
-	pub const WHITE: RGBColour = RGBColour::from_rgb(0xFF, 0xFF, 0xFF);
-	/// The colour Black
-	pub const BLACK: RGBColour = RGBColour::from_rgb(0, 0, 0);
-	/// The colour Cyan
-	pub const CYAN: RGBColour = RGBColour::from_rgb(0, 0xFF, 0xFF);
-	/// The colour Magenta
-	pub const MAGENTA: RGBColour = RGBColour::from_rgb(0xFF, 0, 0xFF);
+/// Represents a glyph in the current font.
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct Glyph(pub u8);
 
-	/// Create a new RGB colour from a packed 32-bit value
-	pub const fn from_packed(packed: u32) -> RGBColour {
-		RGBColour(packed)
-	}
+/// Represents a pallette index that we can use as a text foreground colour.
+///
+/// Only supports the range `0..=15`
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct TextForegroundColour(pub u8);
 
-	/// Get a packed 32-bit value from this RGB Colour
-	pub const fn as_packed(self) -> u32 {
-		self.0
-	}
+/// Represents a pallette index that we can use as a text background colour.
+///
+/// Only supports the range `0..=7`
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct TextBackgroundColour(pub u8);
 
-	/// Create a new RGB colour
-	pub const fn from_rgb(red: u8, green: u8, blue: u8) -> RGBColour {
-		let mut colour = (red as u32) << 16;
-		colour |= (green as u32) << 8;
-		colour |= blue as u32;
-		RGBColour(colour)
-	}
+/// Represents VGA format foreground/background attributes.
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct Attr(pub u8);
 
-	/// Get the red-channel value
-	pub const fn red(self) -> u8 {
-		((self.0 >> 16) & 0xFF) as u8
-	}
-
-	/// Get the green-channel value
-	pub const fn green(self) -> u8 {
-		((self.0 >> 8) & 0xFF) as u8
-	}
-
-	/// Get the blue-channel value
-	pub const fn blue(self) -> u8 {
-		(self.0 & 0xFF) as u8
-	}
-}
+/// Represents a glyph/attribute pair. This is what out text console is made
+/// out of. They work in exactly the same way as IBM PC VGA.
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq, Default)]
+pub struct GlyphAttr(pub u16);
 
 // ============================================================================
 // Impls
@@ -369,8 +347,180 @@ impl Mode {
 	}
 }
 
+impl RGBColour {
+	/// The colour Red
+	pub const RED: RGBColour = RGBColour::from_rgb(0xFF, 0, 0);
+	/// The colour Green
+	pub const GREEN: RGBColour = RGBColour::from_rgb(0, 0xFF, 0);
+	/// The colour Blue
+	pub const BLUE: RGBColour = RGBColour::from_rgb(0, 0, 0xFF);
+	/// The colour Yellow
+	pub const YELLOW: RGBColour = RGBColour::from_rgb(0xFF, 0xFF, 0);
+	/// The colour White
+	pub const WHITE: RGBColour = RGBColour::from_rgb(0xFF, 0xFF, 0xFF);
+	/// The colour Black
+	pub const BLACK: RGBColour = RGBColour::from_rgb(0, 0, 0);
+	/// The colour Cyan
+	pub const CYAN: RGBColour = RGBColour::from_rgb(0, 0xFF, 0xFF);
+	/// The colour Magenta
+	pub const MAGENTA: RGBColour = RGBColour::from_rgb(0xFF, 0, 0xFF);
+
+	/// Create a new RGB colour from a packed 32-bit value
+	pub const fn from_packed(packed: u32) -> RGBColour {
+		RGBColour(packed)
+	}
+
+	/// Get a packed 32-bit value from this RGB Colour
+	pub const fn as_packed(self) -> u32 {
+		self.0
+	}
+
+	/// Create a new RGB colour
+	pub const fn from_rgb(red: u8, green: u8, blue: u8) -> RGBColour {
+		let mut colour = (red as u32) << 16;
+		colour |= (green as u32) << 8;
+		colour |= blue as u32;
+		RGBColour(colour)
+	}
+
+	/// Get the red-channel value
+	pub const fn red(self) -> u8 {
+		((self.0 >> 16) & 0xFF) as u8
+	}
+
+	/// Get the green-channel value
+	pub const fn green(self) -> u8 {
+		((self.0 >> 8) & 0xFF) as u8
+	}
+
+	/// Get the blue-channel value
+	pub const fn blue(self) -> u8 {
+		(self.0 & 0xFF) as u8
+	}
+}
+
+
+impl TextForegroundColour {
+	/// The highest value a VGA text-mode foreground colour can have.
+	pub const MAX: u8 = 15;
+
+	/// Bright white (assuming the default palette).
+	pub const WHITE: TextForegroundColour = TextForegroundColour(15);
+
+	/// Make a new TextForegroundColour from an integer.
+	pub const fn new(value: u8) -> Result<TextForegroundColour, ()> {
+		if value <= Self::MAX {
+			Ok(TextForegroundColour(value))
+		} else {
+			Err(())
+		}
+	}
+
+	/// Make a new TextForegroundColour from an integer without bounds checking.
+	///
+	/// The value must be `<= Self::MAX`
+	pub const unsafe fn new_unchecked(value: u8) -> TextForegroundColour {
+		TextForegroundColour(value)
+	}
+
+	/// Convert to a raw integer
+	pub const fn as_u8(self) -> u8 {
+		self.0
+	}
+}
+
+impl TextBackgroundColour {
+	/// The highest value a VGA text-mode background colour can have.
+	pub const MAX: u8 = 7;
+
+	/// Make a new TextForegroundColour from an integer.
+	pub const fn new(value: u8) -> Result<Self, ()> {
+		if value <= Self::MAX {
+			Ok(Self(value))
+		} else {
+			Err(())
+		}
+	}
+
+	/// Make a new TextForegroundColour from an integer without bounds checking.
+	///
+	/// The value must be `<= Self::MAX`
+	pub const unsafe fn new_unchecked(value: u8) -> Self {
+		Self(value)
+	}
+
+	/// Convert to a raw integer
+	pub const fn as_u8(self) -> u8 {
+		self.0
+	}
+}
+
+impl Attr {
+	/// Make a new Attribute Value
+	pub const fn new(fg: TextForegroundColour, bg: TextBackgroundColour, blink: bool) -> Attr {
+		let fg = fg.0;
+		let bg = bg.0 << 4;
+		let blink = if blink { 1 << 7 } else { 0 };
+		let value = blink | bg | fg;
+		Attr(value)
+	}
+
+	/// Get the foreground colour
+	pub const fn fg(&self) -> TextForegroundColour {
+		TextForegroundColour(self.0 & 0x0F)
+	}
+
+	/// Get the background colour
+	pub const fn bg(&self) -> TextBackgroundColour {
+		TextBackgroundColour((self.0 >> 4) & 0x07)
+	}
+
+	/// Is the text blinking?
+	pub const fn blink(&self) -> bool {
+		(self.0 & 0x80) != 0
+	}
+
+	/// Make a new attribute with the new foreground colour
+	pub const fn set_fg(self, fg: TextForegroundColour) -> Attr {
+		Attr::new(fg, self.bg(), self.blink())
+	}
+
+	/// Make a new attribute with the new background colour
+	pub const fn set_bg(self, bg: TextBackgroundColour) -> Attr {
+		Attr::new(self.fg(), bg, self.blink())
+	}
+
+	/// Make a new attribute with the new blink state
+	pub const fn set_blink(self, blink: bool) -> Attr {
+		Attr::new(self.fg(), self.bg(), blink)
+	}
+
+	/// Convert this attribute into a raw 8-bit value
+	pub const fn as_u8(self) -> u8 {
+		self.0
+	}
+}
+
+impl GlyphAttr {
+	/// Make a new glyph/attribute pair.
+	pub const fn new(glyph: Glyph, attr: Attr) -> GlyphAttr {
+		let value: u16 = (glyph.0 as u16) + ((attr.0 as u16) << 8);
+		GlyphAttr(value)
+	}
+
+	/// Get the glyph component of this pair.
+	pub const fn glyph(self) -> Glyph {
+		Glyph(self.0 as u8)
+	}
+
+	/// Get the attribute component of this pair.
+	pub const fn attr(self) -> Attr {
+		Attr((self.0 >> 8) as u8)
+	}
+}
+
 // ============================================================================
-// Impls
+// Tests
 // ============================================================================
 
 #[cfg(test)]
