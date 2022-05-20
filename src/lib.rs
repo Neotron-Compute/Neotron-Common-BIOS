@@ -255,6 +255,28 @@ pub struct Api {
 	///
 	pub video_set_whole_palette:
 		unsafe extern "C" fn(start: *const video::RGBColour, length: usize),
+	/// Convert a Unicode code-point to a Glyph, for the current font.
+	///
+	/// Video memory in text-mode works in 8-bit Glyphs (well, 16-bit
+	/// Glyph/Attribute pairs). Rust works in Unicode strings (usually stored as
+	/// UTF-8). The BIOS has a default text-mode font, and this function
+	/// converts from a single Unicode code-point, to a Glyph.
+	///
+	/// Note that combining characters (`LATIN CAPITAL LETTER E` followed by
+	/// `COMBINING GRAVE ACCENT`) are not supported here. You should normalise
+	/// the text down to a single Unicode Scalar Value where possible (e.g.
+	/// `LATIN CAPITAL LETTER E WITH GRAVE`) before you call this function.
+	/// Don't expect emoji to work - the BIOS only has 256 glyphs available.
+	///
+	/// Really this is just a function to support the fact that your BIOS may
+	/// have been written by someone who doesn't use Code Page 850 as their
+	/// native character set for the BIOS boot-up messages, and the OS needs to
+	/// deal with that.
+	///
+	/// There is a basic assumption though that the first 127 ASCII characters
+	/// (and hence the first 127 Unicode Scalar Values) are supported on any
+	/// BIOS.
+	pub video_convert_character: extern "C" fn(character: u32) -> crate::Option<u8>, 
 	/// Find out about regions of memory in the system.
 	///
 	/// The first region (index `0`) must be the 'application region' which is
