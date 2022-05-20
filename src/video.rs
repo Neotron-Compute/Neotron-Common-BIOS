@@ -399,7 +399,6 @@ impl RGBColour {
 	}
 }
 
-
 impl TextForegroundColour {
 	/// The highest value a VGA text-mode foreground colour can have.
 	pub const MAX: u8 = 15;

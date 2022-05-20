@@ -276,7 +276,7 @@ pub struct Api {
 	/// There is a basic assumption though that the first 127 ASCII characters
 	/// (and hence the first 127 Unicode Scalar Values) are supported on any
 	/// BIOS.
-	pub video_convert_character: extern "C" fn(character: u32) -> crate::Option<u8>, 
+	pub video_convert_character: extern "C" fn(character: u32) -> crate::Option<u8>,
 	/// Find out about regions of memory in the system.
 	///
 	/// The first region (index `0`) must be the 'application region' which is
