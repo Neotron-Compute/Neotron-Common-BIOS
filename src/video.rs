@@ -36,6 +36,13 @@
 // Types
 // ============================================================================
 
+/// The set of errors you can get from this module.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Error {
+	/// You supplied a parameter that was out of range, or otherwise unsupported.
+	BadParam,
+}
+
 /// Describes a video mode.
 ///
 /// A Neotron BIOS may support multiple video modes. Each is described using
@@ -130,22 +137,24 @@ pub struct Glyph(pub u8);
 /// Only supports the range `0..=15`
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub struct TextForegroundColour(pub u8);
+pub struct TextForegroundColour(u8);
 
 /// Represents a pallette index that we can use as a text background colour.
 ///
 /// Only supports the range `0..=7`
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub struct TextBackgroundColour(pub u8);
+pub struct TextBackgroundColour(u8);
 
 /// Represents VGA format foreground/background attributes.
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Attr(pub u8);
 
-/// Represents a glyph/attribute pair. This is what out text console is made
-/// out of. They work in exactly the same way as IBM PC VGA.
+/// Represents a glyph/attribute pair.
+/// 
+/// This is what out text console is made out of. They work in exactly the same
+/// way as IBM PC VGA.
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
 pub struct GlyphAttr(pub u16);
@@ -402,23 +411,57 @@ impl TextForegroundColour {
 	/// The highest value a VGA text-mode foreground colour can have.
 	pub const MAX: u8 = 15;
 
-	/// Bright white (assuming the default palette).
-	pub const WHITE: TextForegroundColour = TextForegroundColour(15);
+	/// The colour *Black*, assuming the default palette is loaded.
+	pub const BLACK: Self = Self(0);
+	/// The colour *Dark Red*, assuming the default palette is loaded.
+	pub const DARK_RED: Self = Self(1);
+	/// The colour *Dark Green*, assuming the default palette is loaded.
+	pub const DARK_GREEN: Self = Self(2);
+	/// The colour *Orange*, assuming the default palette is loaded.
+	pub const ORANGE: Self = Self(3);
+	/// The colour *Blue*, assuming the default palette is loaded.
+	pub const BLUE: Self = Self(4);
+	/// The colour *Dark Magenta*, assuming the default palette is loaded.
+	pub const DARK_MAGENTA: Self = Self(5);
+	/// The colour *Dark Cyan*, assuming the default palette is loaded.
+	pub const DARK_CYAN: Self = Self(6);
+	/// The colour *Yellow*, assuming the default palette is loaded.
+	pub const YELLOW: Self = Self(7);
+	/// The colour *Grey*, assuming the default palette is loaded.
+	pub const GREY: Self = Self(8);
+	/// The colour *Bright Red*, assuming the default palette is loaded.
+	pub const BRIGHT_RED: Self = Self(9);
+	/// The colour *Bright Green*, assuming the default palette is loaded.
+	pub const BRIGHT_GREEN: Self = Self(10);
+	/// The colour *Bright Yellow*, assuming the default palette is loaded.
+	pub const BRIGHT_YELLOW: Self = Self(11);
+	/// The colour *Bright Blue*, assuming the default palette is loaded.
+	pub const BRIGHT_BLUE: Self = Self(12);
+	/// The colour *Bright Magenta*, assuming the default palette is loaded.
+	pub const BRIGHT_MAGENTA: Self = Self(13);
+	/// The colour *Bright Cyan*, assuming the default palette is loaded.
+	pub const BRIGHT_CYAN: Self = Self(14);
+	/// The colour *White*, assuming the default palette is loaded.
+	pub const WHITE: Self = Self(15);
 
-	/// Make a new TextForegroundColour from an integer.
-	pub const fn new(value: u8) -> Result<TextForegroundColour, ()> {
+	/// Make a new `TextForegroundColour` from an integer.
+	///
+	/// The value must be `<= Self::MAX`, or you will get an error.
+	pub const fn new(value: u8) -> Result<Self, Error> {
 		if value <= Self::MAX {
-			Ok(TextForegroundColour(value))
+			Ok(Self(value))
 		} else {
-			Err(())
+			Err(Error::BadParam)
 		}
 	}
 
-	/// Make a new TextForegroundColour from an integer without bounds checking.
+	/// Make a new `TextForegroundColour` from an integer without bounds checking.
 	///
-	/// The value must be `<= Self::MAX`
-	pub const unsafe fn new_unchecked(value: u8) -> TextForegroundColour {
-		TextForegroundColour(value)
+	/// # Safety
+	///
+	/// The value must be `<= Self::MAX`, or you will get undefined behaviour.
+	pub const unsafe fn new_unchecked(value: u8) -> Self {
+		Self(value)
 	}
 
 	/// Convert to a raw integer
@@ -431,18 +474,39 @@ impl TextBackgroundColour {
 	/// The highest value a VGA text-mode background colour can have.
 	pub const MAX: u8 = 7;
 
+	/// The colour *Black*, assuming the default palette is loaded.
+	pub const BLACK: TextBackgroundColour = TextBackgroundColour(0);
+	/// The colour *Dark Red*, assuming the default palette is loaded.
+	pub const DARK_RED: TextBackgroundColour = TextBackgroundColour(1);
+	/// The colour *Dark Green*, assuming the default palette is loaded.
+	pub const DARK_GREEN: TextBackgroundColour = TextBackgroundColour(2);
+	/// The colour *Orange*, assuming the default palette is loaded.
+	pub const ORANGE: TextBackgroundColour = TextBackgroundColour(3);
+	/// The colour *Blue*, assuming the default palette is loaded.
+	pub const BLUE: TextBackgroundColour = TextBackgroundColour(4);
+	/// The colour *Dark Magenta*, assuming the default palette is loaded.
+	pub const DARK_MAGENTA: TextBackgroundColour = TextBackgroundColour(5);
+	/// The colour *Dark Cyan*, assuming the default palette is loaded.
+	pub const DARK_CYAN: TextBackgroundColour = TextBackgroundColour(6);
+	/// The colour *Yellow*, assuming the default palette is loaded.
+	pub const YELLOW: TextBackgroundColour = TextBackgroundColour(7);
+
 	/// Make a new TextForegroundColour from an integer.
-	pub const fn new(value: u8) -> Result<Self, ()> {
+	///
+	/// The value must be `<= Self::MAX`, or you will get an error.
+	pub const fn new(value: u8) -> Result<Self, Error> {
 		if value <= Self::MAX {
 			Ok(Self(value))
 		} else {
-			Err(())
+			Err(Error::BadParam)
 		}
 	}
 
 	/// Make a new TextForegroundColour from an integer without bounds checking.
 	///
-	/// The value must be `<= Self::MAX`
+	/// # Safety
+	///
+	/// The value must be `<= Self::MAX`, or you will get undefined behaviour.
 	pub const unsafe fn new_unchecked(value: u8) -> Self {
 		Self(value)
 	}
@@ -454,10 +518,20 @@ impl TextBackgroundColour {
 }
 
 impl Attr {
-	/// Make a new Attribute Value
+	/// Make a new Attribute Value.
+	///
+	/// This is packed according to the format for the IBM *Video Graphics Array* (VGA) standard,
+	/// with a four-bit (`0..=15`) foreground colour, a three-bit (`0..=7`) background colour
+	/// and a single bit for *blink* which makes the text blink on and off roughly once a second.
+	///
+	/// ```text
+	/// +-------+-----+-----+-----+-----+-----+-----+-----+
+	/// + BLINK | BG2 | BG1 | BG0 | FG3 | FG2 | FG1 | FG0 |
+	/// +-------+-----+-----+-----+-----+-----+-----+-----+
+	/// ```
 	pub const fn new(fg: TextForegroundColour, bg: TextBackgroundColour, blink: bool) -> Attr {
-		let fg = fg.0;
-		let bg = bg.0 << 4;
+		let fg = fg.0 & 0b1111;
+		let bg = (bg.0 & 0b111) << 4;
 		let blink = if blink { 1 << 7 } else { 0 };
 		let value = blink | bg | fg;
 		Attr(value)
@@ -479,18 +553,18 @@ impl Attr {
 	}
 
 	/// Make a new attribute with the new foreground colour
-	pub const fn set_fg(self, fg: TextForegroundColour) -> Attr {
-		Attr::new(fg, self.bg(), self.blink())
+	pub fn set_fg(&mut self, fg: TextForegroundColour) {
+		*self = Self::new(fg, self.bg(), self.blink());
 	}
 
-	/// Make a new attribute with the new background colour
-	pub const fn set_bg(self, bg: TextBackgroundColour) -> Attr {
-		Attr::new(self.fg(), bg, self.blink())
+	/// Make a new Selfibute with the new background colour
+	pub fn set_bg(&mut self, bg: TextBackgroundColour) {
+		*self = Self::new(self.fg(), bg, self.blink());
 	}
 
 	/// Make a new attribute with the new blink state
-	pub const fn set_blink(self, blink: bool) -> Attr {
-		Attr::new(self.fg(), self.bg(), blink)
+	pub fn set_blink(&mut self, blink: bool) {
+		*self = Self::new(self.fg(), self.bg(), blink);
 	}
 
 	/// Convert this attribute into a raw 8-bit value
