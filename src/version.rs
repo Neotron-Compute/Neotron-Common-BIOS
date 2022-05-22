@@ -1,6 +1,9 @@
 //! # Version
 //!
 //! Contains the version API.
+//!
+//! Note that all types in this file that are exported in the `Api` structure
+//! *must* be `#[repr(C)]` and ABI stable.
 
 // Copyright (C) The Neotron Developers, 2019-2022
 //
