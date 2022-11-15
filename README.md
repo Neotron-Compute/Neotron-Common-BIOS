@@ -41,7 +41,11 @@ dual licensed as above, without any additional terms or conditions.
 
 ### Unreleased Changes
 
-* None
+* Change `time_get` to `time_clock_get` 
+* Change `time_set` to `time_clock_set` 
+* Add `time_ticks_get` and `time_ticks_per_second`
+* Add `bus_interrupt_status`
+* Remove `delay`
 
 ### v0.6.1
 
