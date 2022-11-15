@@ -27,6 +27,7 @@
 // ============================================================================
 
 pub mod audio;
+pub mod block_dev;
 pub mod bus;
 pub mod hid;
 pub mod i2c;
@@ -514,6 +515,70 @@ pub struct Api {
 	/// set when the interrupt is pending. There is no masking - ignore the bits
 	/// you don't care about.
 	pub bus_interrupt_status: extern "C" fn() -> u32,
+
+	// ========================================================================
+	// Block Device Support
+	// ========================================================================
+	/// Get information about the Block Devices in the system.
+	///
+	/// Block Devices are also known as *disk drives*. They can be read from
+	/// (and often written to) but only in units called *blocks* or *sectors*.
+	///
+	/// The BIOS should enumerate removable devices first, followed by fixed
+	/// devices.
+	///
+	/// The set of devices is not expected to change at run-time - removal of
+	/// media is indicated with a boolean field in the
+	/// `block_dev::DeviceInfo` structure.
+	pub block_dev_get_info: extern "C" fn(device: u8) -> crate::Option<block_dev::DeviceInfo>,
+	/// Eject a disk from the drive.
+	///
+	/// Will return an error if this device is not removable. Does not return an
+	/// error if the drive is already empty.
+	pub block_dev_eject: extern "C" fn(device: u8) -> crate::Result<()>,
+	/// Write one or more sectors to a block device.
+	///
+	/// The function will block until all data is written. The array pointed
+	/// to by `data` must be `num_blocks * block_size` in length, where
+	/// `block_size` is given by `block_dev_get_info`.
+	///
+	/// There are no requirements on the alignment of `data` but if it is
+	/// aligned, the BIOS may be able to use a higher-performance code path.
+	pub block_write: extern "C" fn(
+		device: u8,
+		start_block: block_dev::BlockIdx,
+		num_blocks: u8,
+		data: ApiByteSlice,
+	) -> crate::Result<()>,
+	/// Read one or more sectors to a block device.
+	///
+	/// The function will block until all data is read. The array pointed
+	/// to by `data` must be `num_blocks * block_size` in length, where
+	/// `block_size` is given by `block_dev_get_info`.
+	///
+	/// There are no requirements on the alignment of `data` but if it is
+	/// aligned, the BIOS may be able to use a higher-performance code path.
+	pub block_read: extern "C" fn(
+		device: u8,
+		start_block: block_dev::BlockIdx,
+		num_blocks: u8,
+		data: ApiBuffer,
+	) -> crate::Result<()>,
+	/// Verify one or more sectors on a block device (that is read them and
+	/// check they match the given data).
+	///
+	/// The function will block until all data is verified. The array pointed
+	/// to by `data` must be `num_blocks * block_size` in length, where
+	/// `block_size` is given by `block_dev_get_info`.
+	///
+	/// There are no requirements on the alignment of `data` but if it is
+	/// aligned, the BIOS may be able to use a higher-performance code path.
+	pub block_verify: extern "C" fn(
+		device: u8,
+		start_block: block_dev::BlockIdx,
+		num_blocks: u8,
+		data: ApiByteSlice,
+	) -> crate::Result<()>,
 }
 
 // ============================================================================
