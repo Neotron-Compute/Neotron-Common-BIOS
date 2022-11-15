@@ -2,7 +2,8 @@
 //!
 //! Contains types used in the Neotron API.
 //!
-//! Note that all types in this file *must* be `#[repr(C)]` and ABI stable.
+//! Note that all types in this file that are exported in the `Api` structure
+//! *must* be `#[repr(C)]` and ABI stable.
 
 // Copyright (C) The Neotron Developers, 2019-2022
 //
@@ -128,6 +129,13 @@ pub struct Time {
 	/// Nanoseconds since the last second rolled over
 	pub nsecs: u32,
 }
+
+/// Represents a tick of some internal monotonic clock.
+///
+/// Usually runs at 1 kHz.
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct Ticks(pub u64);
 
 /// The kinds of memory we know about
 #[repr(C)]

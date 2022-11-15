@@ -55,6 +55,9 @@ pub const API_VERSION: Version = Version::new(0, 6, 1);
 /// function.
 #[repr(C)]
 pub struct Api {
+	// ========================================================================
+	// Version and Metadata
+	// ========================================================================
 	/// Gets the version number of the BIOS API.
 	///
 	/// You need this value to determine which of the following API calls are
@@ -69,6 +72,10 @@ pub struct Api {
 	/// a Rust string. It is unspecified as to whether the string is located
 	/// in Flash ROM or RAM (but it's likely to be Flash ROM).
 	pub bios_version_get: extern "C" fn() -> ApiString<'static>,
+
+	// ========================================================================
+	// Serial Port Support
+	// ========================================================================
 	/// Get information about the Serial ports in the system.
 	///
 	/// Serial ports are ordered octet-oriented pipes. You can push octets
@@ -106,6 +113,10 @@ pub struct Api {
 		data: ApiBuffer,
 		timeout: crate::Option<Timeout>,
 	) -> crate::Result<usize>,
+
+	// ========================================================================
+	// Time Support
+	// ========================================================================
 	/// Get the current wall time.
 	///
 	/// The Neotron BIOS does not understand time zones, leap-seconds or the
@@ -119,7 +130,7 @@ pub struct Api {
 	/// If the BIOS does not have a battery-backed clock, or if that battery
 	/// has failed to keep time, the system starts up assuming it is the
 	/// epoch.
-	pub time_get: extern "C" fn() -> Time,
+	pub time_clock_get: extern "C" fn() -> Time,
 	/// Set the current wall time.
 	///
 	/// See `time_get` for a description of now the Neotron BIOS should handle
@@ -129,7 +140,17 @@ pub struct Api {
 	/// time (e.g. the user has updated the current time, or if you get a GPS
 	/// fix). The BIOS should push the time out to the battery-backed Real
 	/// Time Clock, if it has one.
-	pub time_set: extern "C" fn(time: Time),
+	pub time_clock_set: extern "C" fn(time: Time),
+	/// Get the current monotonic system time.
+	///
+	/// This value will never go backwards and it should never wrap.
+	pub time_ticks_get: extern "C" fn() -> Ticks,
+	/// Report the system tick rate, in ticks-per-second.
+	pub time_ticks_per_second: extern "C" fn() -> Ticks,
+
+	// ========================================================================
+	// Persistent Configuration Support
+	// ========================================================================
 	/// Get the configuration data block.
 	///
 	/// Configuration data is, to the BIOS, just a block of bytes of a given
@@ -140,6 +161,10 @@ pub struct Api {
 	///
 	/// See `configuration_get`.
 	pub configuration_set: extern "C" fn(buffer: ApiByteSlice) -> crate::Result<()>,
+
+	// ========================================================================
+	// Video Output Support
+	// ========================================================================
 	/// Does this Neotron BIOS support this video mode?
 	pub video_is_valid_mode: extern "C" fn(mode: video::Mode) -> bool,
 	/// Does this Neotron BIOS require extra VRAM (passed with
@@ -255,6 +280,10 @@ pub struct Api {
 	///
 	pub video_set_whole_palette:
 		unsafe extern "C" fn(start: *const video::RGBColour, length: usize),
+
+	// ========================================================================
+	// Memory Region Support
+	// ========================================================================
 	/// Find out about regions of memory in the system.
 	///
 	/// The first region (index `0`) must be the 'application region' which is
@@ -272,12 +301,20 @@ pub struct Api {
 	/// application space available). The OS will prefer lower numbered regions
 	/// (other than Region 0), so faster memory should be listed first.
 	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Result<types::MemoryRegion>,
+
+	// ========================================================================
+	// Human Interface Device Support
+	// ========================================================================
 	/// Get the next available HID event, if any.
 	///
 	/// This function doesn't block. It will return `Ok(None)` if there is no event ready.
 	pub hid_get_event: extern "C" fn() -> crate::Result<crate::Option<hid::HidEvent>>,
 	/// Control the keyboard LEDs.
 	pub hid_set_leds: extern "C" fn(leds: hid::KeyboardLeds) -> crate::Result<()>,
+
+	// ========================================================================
+	// I²C Bus Support
+	// ========================================================================
 	/// Get information about the I²C Buses in the system.
 	///
 	/// I²C Bus 0 should be the one connected to the Neotron Bus.
@@ -309,6 +346,10 @@ pub struct Api {
 		tx2: ApiByteSlice,
 		rx: ApiBuffer,
 	) -> crate::Result<()>,
+
+	// ========================================================================
+	// Audio Support
+	// ========================================================================
 	/// Get information about the Audio Mixer channels
 	pub audio_mixer_channel_get_info:
 		extern "C" fn(audio_mixer_id: u8) -> crate::Result<audio::MixerChannelInfo>,
@@ -398,6 +439,10 @@ pub struct Api {
 	/// How many samples in the current format can be read right now using
 	/// `audio_input_data`?
 	pub audio_input_get_count: extern "C" fn() -> crate::Result<usize>,
+
+	// ========================================================================
+	// Neotron (SPI) Bus Support
+	// ========================================================================
 	/// Select a Neotron Bus Peripheral. This drives the SPI chip-select line
 	/// low for that peripheral. Selecting a peripheral de-selects any other
 	/// peripherals. Select peripheral 'None' to select no peripherals. If
@@ -463,18 +508,12 @@ pub struct Api {
 	/// # Ok::<(), neotron_common_bios::Error>(())
 	/// ```
 	pub bus_exchange: extern "C" fn(buffer: ApiBuffer) -> crate::Result<()>,
-	/// Busy-waits for a period of time.
+	/// Get bus interrupt status.
 	///
-	/// This is better than spinning in a loop a million times as:
-	///
-	/// a) deferred interrupts can be processed
-	/// b) the timing is based on clock frequency and so relatively accurate.
-	///
-	/// If you are drawing to the screen, you may want `Api::video_wait_for_line` instead.
-	///
-	/// If you want to delay for long periods, track the wall-clock time
-	/// instead.
-	pub delay: extern "C" fn(timeout: Timeout),
+	/// Up to 32 interrupts can be returned as a single 32-bit value. A bit is
+	/// set when the interrupt is pending. There is no masking - ignore the bits
+	/// you don't care about.
+	pub bus_interrupt_status: extern "C" fn() -> u32,
 }
 
 // ============================================================================
