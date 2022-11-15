@@ -152,7 +152,7 @@ pub struct TextBackgroundColour(u8);
 pub struct Attr(pub u8);
 
 /// Represents a glyph/attribute pair.
-/// 
+///
 /// This is what out text console is made out of. They work in exactly the same
 /// way as IBM PC VGA.
 #[repr(transparent)]
