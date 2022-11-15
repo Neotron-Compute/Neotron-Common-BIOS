@@ -492,7 +492,12 @@ pub struct Api {
 	/// # Ok::<(), neotron_common_bios::Error>(())
 	/// ```
 	pub bus_exchange: extern "C" fn(buffer: ApiBuffer) -> crate::Result<()>,
-
+	/// Get bus interrupt status.
+	///
+	/// Up to 32 interrupts can be returned as a single 32-bit value. A bit is
+	/// set when the interrupt is pending. There is no masking - ignore the bits
+	/// you don't care about.
+	pub bus_interrupt_status: extern "C" fn() -> u32,
 }
 
 // ============================================================================
