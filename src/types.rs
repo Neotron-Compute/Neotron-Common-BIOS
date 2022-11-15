@@ -130,6 +130,13 @@ pub struct Time {
 	pub nsecs: u32,
 }
 
+/// Represents a tick of some internal monotonic clock.
+///
+/// Usually runs at 1 kHz.
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct Ticks(pub u64);
+
 /// The kinds of memory we know about
 #[repr(C)]
 #[derive(Debug, Clone)]

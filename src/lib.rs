@@ -119,7 +119,7 @@ pub struct Api {
 	/// If the BIOS does not have a battery-backed clock, or if that battery
 	/// has failed to keep time, the system starts up assuming it is the
 	/// epoch.
-	pub time_get: extern "C" fn() -> Time,
+	pub time_clock_get: extern "C" fn() -> Time,
 	/// Set the current wall time.
 	///
 	/// See `time_get` for a description of now the Neotron BIOS should handle
@@ -129,7 +129,14 @@ pub struct Api {
 	/// time (e.g. the user has updated the current time, or if you get a GPS
 	/// fix). The BIOS should push the time out to the battery-backed Real
 	/// Time Clock, if it has one.
-	pub time_set: extern "C" fn(time: Time),
+	pub time_clock_set: extern "C" fn(time: Time),
+	/// Get the current monotonic system time.
+	///
+	/// This value will never go backwards and it should never wrap.
+	pub time_ticks_get: extern "C" fn() -> Ticks,
+	/// Report the system tick rate, in ticks-per-second.
+	pub time_ticks_per_second: extern "C" fn() -> Ticks,
+
 	/// Get the configuration data block.
 	///
 	/// Configuration data is, to the BIOS, just a block of bytes of a given
@@ -485,18 +492,7 @@ pub struct Api {
 	/// # Ok::<(), neotron_common_bios::Error>(())
 	/// ```
 	pub bus_exchange: extern "C" fn(buffer: ApiBuffer) -> crate::Result<()>,
-	/// Busy-waits for a period of time.
-	///
-	/// This is better than spinning in a loop a million times as:
-	///
-	/// a) deferred interrupts can be processed
-	/// b) the timing is based on clock frequency and so relatively accurate.
-	///
-	/// If you are drawing to the screen, you may want `Api::video_wait_for_line` instead.
-	///
-	/// If you want to delay for long periods, track the wall-clock time
-	/// instead.
-	pub delay: extern "C" fn(timeout: Timeout),
+
 }
 
 // ============================================================================
