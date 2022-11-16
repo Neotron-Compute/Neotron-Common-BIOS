@@ -47,6 +47,8 @@ dual licensed as above, without any additional terms or conditions.
 * Add `bus_interrupt_status`
 * Remove `delay`
 * Add back in the `block_XXX` API for reading/writing Block Devices.
+* Add idle function.
+* `memory_get_region` returns `Option`, not `Result`
 
 ### v0.6.1
 

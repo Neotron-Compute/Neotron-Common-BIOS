@@ -579,6 +579,15 @@ pub struct Api {
 		num_blocks: u8,
 		data: ApiByteSlice,
 	) -> crate::Result<()>,
+
+	// ========================================================================
+	// Power management functions
+	// ========================================================================
+	/// The OS will call this function when it's idle.
+	///
+	/// On a microcontroller, this will wait for interrupts. Running in an
+	/// emulator, this will sleep the thread for a while.
+	pub power_idle: extern "C" fn(),
 }
 
 // ============================================================================
