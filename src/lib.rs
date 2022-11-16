@@ -301,7 +301,7 @@ pub struct Api {
 	/// (if any), or from the top of Region 0 (although this reduces the maximum
 	/// application space available). The OS will prefer lower numbered regions
 	/// (other than Region 0), so faster memory should be listed first.
-	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Result<types::MemoryRegion>,
+	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Option<types::MemoryRegion>,
 
 	// ========================================================================
 	// Human Interface Device Support
