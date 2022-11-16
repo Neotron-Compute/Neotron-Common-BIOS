@@ -301,7 +301,7 @@ pub struct Api {
 	/// (if any), or from the top of Region 0 (although this reduces the maximum
 	/// application space available). The OS will prefer lower numbered regions
 	/// (other than Region 0), so faster memory should be listed first.
-	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Result<types::MemoryRegion>,
+	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Option<types::MemoryRegion>,
 
 	// ========================================================================
 	// Human Interface Device Support
@@ -579,6 +579,15 @@ pub struct Api {
 		num_blocks: u8,
 		data: ApiByteSlice,
 	) -> crate::Result<()>,
+
+	// ========================================================================
+	// Power management functions
+	// ========================================================================
+	/// The OS will call this function when it's idle.
+	///
+	/// On a microcontroller, this will wait for interrupts. Running in an
+	/// emulator, this will sleep the thread for a while.
+	pub power_idle: extern "C" fn(),
 }
 
 // ============================================================================
