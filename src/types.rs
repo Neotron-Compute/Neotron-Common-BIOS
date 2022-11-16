@@ -407,8 +407,13 @@ impl core::fmt::Display for Time {
 impl From<&Time> for chrono::DateTime<chrono::Utc> {
 	fn from(time: &Time) -> Self {
 		use chrono::prelude::*;
-		let our_epoch = Utc.ymd(2001, 1, 1).and_hms(0, 0, 0).timestamp();
-		chrono::Utc.timestamp(i64::from(time.secs) + our_epoch, time.nsecs)
+		let our_epoch = Utc
+			.with_ymd_and_hms(2000, 1, 1, 0, 0, 0)
+			.unwrap()
+			.timestamp();
+		chrono::Utc
+			.timestamp_opt(i64::from(time.secs) + our_epoch, time.nsecs)
+			.unwrap()
 	}
 }
 
