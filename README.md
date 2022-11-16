@@ -46,6 +46,7 @@ dual licensed as above, without any additional terms or conditions.
 * Add `time_ticks_get` and `time_ticks_per_second`
 * Add `bus_interrupt_status`
 * Remove `delay`
+* Add back in the `block_XXX` API for reading/writing Block Devices.
 
 ### v0.6.1
 
