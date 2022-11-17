@@ -1,10 +1,13 @@
 [package]
 name = "neotron-common-bios"
-version = "0.4.0"
+version = "0.7.0"
 authors = ["Jonathan 'theJPster' Pallant <github@thejpster.org.uk>"]
 edition = "2018"
 description = "Common BIOS code and API for all Neotron systems."
 license = "GPL-3.0-or-later"
+repository = "https://github.com/neotron-compute/neotron-common-bios.git"
+homepage = "https://github.com/neotron-compute/neotron-common-bios"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -1,6 +1,6 @@
-//! # Version
+//! # Neotron Bus
 //!
-//! Contains the version API.
+//! Neotron Bus related types.
 //!
 //! Note that all types in this file that are exported in the `Api` structure
 //! *must* be `#[repr(C)]` and ABI stable.
@@ -36,39 +36,36 @@
 // Types
 // ============================================================================
 
-/// Describes a semantic version.
-///
-/// The version is internally stored as a 32-bit value, but comprises an 8-bit
-/// major version, and 8-bit minor version and an 8-bit patch version.
-#[repr(transparent)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Version(pub u32);
+/// The kinds of Peripheral you can put on a Neotron Bus
+#[repr(u8)]
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum PeripheralKind {
+	/// A Neotron Bus Slot. The OS will need to read the EEPROM at address
+	/// `0x50 + slot_id` to find out what is fitted (if anything).
+	Slot,
+	/// A hard-wired SD/MMC Card slot wired for SPI Mode. The interrupt pin is
+	/// wired to "Card Detect" with a pull-up, so the line goes low when a
+	/// card is inserted and goes high when the card is removed.
+	SdCard,
+	/// This Peripheral ID is reserved for the BIOS to use.
+	Reserved,
+}
+
+/// Describes a Neotron Bus Peripheral
+#[repr(C)]
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct PeripheralInfo {
+	/// A name, such as `slot0`
+	pub name: crate::ApiString<'static>,
+	/// The kind of peripheral
+	pub kind: PeripheralKind,
+}
 
 // ============================================================================
 // Impls
 // ============================================================================
 
-impl Version {
-	/// Create a new Version.
-	pub const fn new(major: u8, minor: u8, patch: u8) -> Version {
-		Version(u32::from_be_bytes([0x00, major, minor, patch]))
-	}
-
-	/// Get the major version portion.
-	pub const fn major(&self) -> u8 {
-		(self.0 >> 16) as u8
-	}
-
-	/// Get the minor version portion.
-	pub const fn minor(&self) -> u8 {
-		(self.0 >> 8) as u8
-	}
-
-	/// Get the patch version portion.
-	pub const fn patch(&self) -> u8 {
-		self.0 as u8
-	}
-}
+// None
 
 // ============================================================================
 // End of File

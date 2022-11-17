@@ -1,9 +1,8 @@
-//! # Version
+//! # Block Devices
 //!
-//! Contains the version API.
+//! Block Device related types.
 //!
-//! Note that all types in this file that are exported in the `Api` structure
-//! *must* be `#[repr(C)]` and ABI stable.
+//! Note that all types in this file *must* be `#[repr(C)]` and ABI stable.
 
 // Copyright (C) The Neotron Developers, 2019-2022
 //
@@ -36,39 +35,53 @@
 // Types
 // ============================================================================
 
-/// Describes a semantic version.
-///
-/// The version is internally stored as a 32-bit value, but comprises an 8-bit
-/// major version, and 8-bit minor version and an 8-bit patch version.
-#[repr(transparent)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Version(pub u32);
+/// The types of block device we support.
+#[repr(C)]
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum DeviceType {
+	/// An *SD* Card
+	SecureDigitalCard,
+	/// A Hard Drive
+	HardDiskDrive,
+	/// A floppy disk in a floppy disk drive
+	FloppyDiskDrive,
+	/// A compact flash card
+	CompactFlashCard,
+}
+
+/// Information about a block device.
+#[repr(C)]
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct DeviceInfo {
+	/// Some human-readable name for this block device (e.g. `SdCard0` or
+	/// `CF1`)
+	pub name: crate::ApiString<'static>,
+	/// The kind of block device this is.
+	pub device_type: DeviceType,
+	/// The size of an addressable block, in bytes.
+	pub block_size: u32,
+	/// The total number of addressable blocks.
+	pub num_blocks: u64,
+	/// Can this device be ejected?
+	pub ejectable: bool,
+	/// Can this device be removed?
+	pub removable: bool,
+	/// Does this have media in it right now?
+	pub media_present: bool,
+	/// Is this media read-only?
+	pub read_only: bool,
+}
+
+/// Uniquely represents a block on a block device.
+#[repr(C)]
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Debug)]
+pub struct BlockIdx(pub u64);
 
 // ============================================================================
 // Impls
 // ============================================================================
 
-impl Version {
-	/// Create a new Version.
-	pub const fn new(major: u8, minor: u8, patch: u8) -> Version {
-		Version(u32::from_be_bytes([0x00, major, minor, patch]))
-	}
-
-	/// Get the major version portion.
-	pub const fn major(&self) -> u8 {
-		(self.0 >> 16) as u8
-	}
-
-	/// Get the minor version portion.
-	pub const fn minor(&self) -> u8 {
-		(self.0 >> 8) as u8
-	}
-
-	/// Get the patch version portion.
-	pub const fn patch(&self) -> u8 {
-		self.0 as u8
-	}
-}
+// None
 
 // ============================================================================
 // End of File

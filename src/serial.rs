@@ -2,24 +2,23 @@
 //!
 //! Serial Port / UART related types.
 //!
-//! Note that all types in this file *must* be `#[repr(C)]` and ABI stable.
-//!
-//! ## License
-//!
-//! > Copyright (C) The Neotron Developers, 2019-2022
-//! >
-//! > This program is free software: you can redistribute it and/or modify
-//! > it under the terms of the GNU General Public License as published by
-//! > the Free Software Foundation, either version 3 of the License, or
-//! > at your option) any later version.
-//! >
-//! > This program is distributed in the hope that it will be useful,
-//! > but WITHOUT ANY WARRANTY; without even the implied warranty of
-//! > MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//! > GNU General Public License for more details.
-//! >
-//! > You should have received a copy of the GNU General Public License
-//! > along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//! Note that all types in this file that are exported in the `Api` structure
+//! *must* be `#[repr(C)]` and ABI stable.
+
+// Copyright (C) The Neotron Developers, 2019-2022
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // ============================================================================
 // Imports
@@ -39,7 +38,7 @@
 
 /// Identifies which sort of serial port each device represents.
 #[repr(C)]
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DeviceType {
 	/// An RS-232 interface
 	Rs232,
@@ -57,7 +56,7 @@ pub enum DeviceType {
 /// Whether each word contains a parity bit, and if so, how it is
 /// calculated.
 #[repr(C)]
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Parity {
 	/// An extra parity bit is added to each word. There will be an odd
 	/// number of `1` bits in the new word (old word + parity bit). This
@@ -75,7 +74,7 @@ pub enum Parity {
 
 /// Whether to use hardware handshaking lines.
 #[repr(C)]
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Handshaking {
 	/// No hardware handshaking - bytes will be dropped if there is an
 	/// overflow
@@ -96,7 +95,7 @@ pub enum Handshaking {
 
 /// The number of stop bits after each word.
 #[repr(C)]
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum StopBits {
 	/// One stop bit is added to each word
 	One,
@@ -106,7 +105,7 @@ pub enum StopBits {
 
 /// The number of data bits in each word sent or received by the UART.
 #[repr(C)]
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DataBits {
 	/// Each word comprises 7 data bits (plus start bit, stop bits and any
 	/// parity bits)
@@ -118,7 +117,7 @@ pub enum DataBits {
 
 /// A particular configuration for a serial port.
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Config {
 	/// The desired transmission speed, in bits per second (also known as
 	/// the 'baud rate'). Some hardware implementations allow a free choice
@@ -137,7 +136,7 @@ pub struct Config {
 
 /// Information about a particular serial device.
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DeviceInfo {
 	/// Some human-readable name for this serial device (e.g. `RS232` or
 	/// `USB0`)

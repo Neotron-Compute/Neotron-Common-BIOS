@@ -2,24 +2,23 @@
 //!
 //! Video/Display related types.
 //!
-//! Note that all types in this file *must* be `#[repr(C)]` and ABI stable.
-//!
-//! ## License
-//!
-//! > Copyright (C) The Neotron Developers, 2019-2022
-//! >
-//! > This program is free software: you can redistribute it and/or modify
-//! > it under the terms of the GNU General Public License as published by
-//! > the Free Software Foundation, either version 3 of the License, or
-//! > at your option) any later version.
-//! >
-//! > This program is distributed in the hope that it will be useful,
-//! > but WITHOUT ANY WARRANTY; without even the implied warranty of
-//! > MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//! > GNU General Public License for more details.
-//! >
-//! > You should have received a copy of the GNU General Public License
-//! > along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//! Note that all types in this file that are exported in the `Api` structure
+//! *must* be `#[repr(C)]` and ABI stable.
+
+// Copyright (C) The Neotron Developers, 2019-2022
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // ============================================================================
 // Imports
@@ -37,6 +36,13 @@
 // Types
 // ============================================================================
 
+/// The set of errors you can get from this module.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Error {
+	/// You supplied a parameter that was out of range, or otherwise unsupported.
+	BadParam,
+}
+
 /// Describes a video mode.
 ///
 /// A Neotron BIOS may support multiple video modes. Each is described using
@@ -47,7 +53,7 @@ pub struct Mode(u8);
 
 /// Describes the format of the video memory.
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Format {
 	/// Text mode with an 8x16 font.
 	///
@@ -97,7 +103,7 @@ pub enum Format {
 
 /// Describes the timing of the video signal.
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Timing {
 	/// VGA Standard 640x480 @ 60Hz.
 	///
@@ -115,6 +121,43 @@ pub enum Timing {
 	/// a specific implementation may differ.
 	T800x600 = 2,
 }
+
+/// Describes an RGB colour-triple.
+#[repr(C)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct RGBColour(u32);
+
+/// Represents a glyph in the current font.
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct Glyph(pub u8);
+
+/// Represents a pallette index that we can use as a text foreground colour.
+///
+/// Only supports the range `0..=15`
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct TextForegroundColour(u8);
+
+/// Represents a pallette index that we can use as a text background colour.
+///
+/// Only supports the range `0..=7`
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct TextBackgroundColour(u8);
+
+/// Represents VGA format foreground/background attributes.
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct Attr(pub u8);
+
+/// Represents a glyph/attribute pair.
+///
+/// This is what out text console is made out of. They work in exactly the same
+/// way as IBM PC VGA.
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq, Default)]
+pub struct GlyphAttr(pub u16);
 
 // ============================================================================
 // Impls
@@ -300,10 +343,256 @@ impl Mode {
 	pub const fn as_u8(self) -> u8 {
 		self.0
 	}
+
+	/// Make a mode from an integer.
+	///
+	/// # Safety
+	///
+	/// The integer `mode_value` must represent a valid mode, as returned from
+	/// `Mode::as_u8`. This function does not validate the given value.
+	pub unsafe fn from_u8(mode_value: u8) -> Mode {
+		Mode(mode_value)
+	}
+}
+
+impl RGBColour {
+	/// The colour Red
+	pub const RED: RGBColour = RGBColour::from_rgb(0xFF, 0, 0);
+	/// The colour Green
+	pub const GREEN: RGBColour = RGBColour::from_rgb(0, 0xFF, 0);
+	/// The colour Blue
+	pub const BLUE: RGBColour = RGBColour::from_rgb(0, 0, 0xFF);
+	/// The colour Yellow
+	pub const YELLOW: RGBColour = RGBColour::from_rgb(0xFF, 0xFF, 0);
+	/// The colour White
+	pub const WHITE: RGBColour = RGBColour::from_rgb(0xFF, 0xFF, 0xFF);
+	/// The colour Black
+	pub const BLACK: RGBColour = RGBColour::from_rgb(0, 0, 0);
+	/// The colour Cyan
+	pub const CYAN: RGBColour = RGBColour::from_rgb(0, 0xFF, 0xFF);
+	/// The colour Magenta
+	pub const MAGENTA: RGBColour = RGBColour::from_rgb(0xFF, 0, 0xFF);
+
+	/// Create a new RGB colour from a packed 32-bit value
+	pub const fn from_packed(packed: u32) -> RGBColour {
+		RGBColour(packed)
+	}
+
+	/// Get a packed 32-bit value from this RGB Colour
+	pub const fn as_packed(self) -> u32 {
+		self.0
+	}
+
+	/// Create a new RGB colour
+	pub const fn from_rgb(red: u8, green: u8, blue: u8) -> RGBColour {
+		let mut colour = (red as u32) << 16;
+		colour |= (green as u32) << 8;
+		colour |= blue as u32;
+		RGBColour(colour)
+	}
+
+	/// Get the red-channel value
+	pub const fn red(self) -> u8 {
+		((self.0 >> 16) & 0xFF) as u8
+	}
+
+	/// Get the green-channel value
+	pub const fn green(self) -> u8 {
+		((self.0 >> 8) & 0xFF) as u8
+	}
+
+	/// Get the blue-channel value
+	pub const fn blue(self) -> u8 {
+		(self.0 & 0xFF) as u8
+	}
+}
+
+impl TextForegroundColour {
+	/// The highest value a VGA text-mode foreground colour can have.
+	pub const MAX: u8 = 15;
+
+	/// The colour *Black*, assuming the default palette is loaded.
+	pub const BLACK: Self = Self(0);
+	/// The colour *Dark Red*, assuming the default palette is loaded.
+	pub const DARK_RED: Self = Self(1);
+	/// The colour *Dark Green*, assuming the default palette is loaded.
+	pub const DARK_GREEN: Self = Self(2);
+	/// The colour *Orange*, assuming the default palette is loaded.
+	pub const ORANGE: Self = Self(3);
+	/// The colour *Blue*, assuming the default palette is loaded.
+	pub const BLUE: Self = Self(4);
+	/// The colour *Dark Magenta*, assuming the default palette is loaded.
+	pub const DARK_MAGENTA: Self = Self(5);
+	/// The colour *Dark Cyan*, assuming the default palette is loaded.
+	pub const DARK_CYAN: Self = Self(6);
+	/// The colour *Yellow*, assuming the default palette is loaded.
+	pub const YELLOW: Self = Self(7);
+	/// The colour *Grey*, assuming the default palette is loaded.
+	pub const GREY: Self = Self(8);
+	/// The colour *Bright Red*, assuming the default palette is loaded.
+	pub const BRIGHT_RED: Self = Self(9);
+	/// The colour *Bright Green*, assuming the default palette is loaded.
+	pub const BRIGHT_GREEN: Self = Self(10);
+	/// The colour *Bright Yellow*, assuming the default palette is loaded.
+	pub const BRIGHT_YELLOW: Self = Self(11);
+	/// The colour *Bright Blue*, assuming the default palette is loaded.
+	pub const BRIGHT_BLUE: Self = Self(12);
+	/// The colour *Bright Magenta*, assuming the default palette is loaded.
+	pub const BRIGHT_MAGENTA: Self = Self(13);
+	/// The colour *Bright Cyan*, assuming the default palette is loaded.
+	pub const BRIGHT_CYAN: Self = Self(14);
+	/// The colour *White*, assuming the default palette is loaded.
+	pub const WHITE: Self = Self(15);
+
+	/// Make a new `TextForegroundColour` from an integer.
+	///
+	/// The value must be `<= Self::MAX`, or you will get an error.
+	pub const fn new(value: u8) -> Result<Self, Error> {
+		if value <= Self::MAX {
+			Ok(Self(value))
+		} else {
+			Err(Error::BadParam)
+		}
+	}
+
+	/// Make a new `TextForegroundColour` from an integer without bounds checking.
+	///
+	/// # Safety
+	///
+	/// The value must be `<= Self::MAX`, or you will get undefined behaviour.
+	pub const unsafe fn new_unchecked(value: u8) -> Self {
+		Self(value)
+	}
+
+	/// Convert to a raw integer
+	pub const fn as_u8(self) -> u8 {
+		self.0
+	}
+}
+
+impl TextBackgroundColour {
+	/// The highest value a VGA text-mode background colour can have.
+	pub const MAX: u8 = 7;
+
+	/// The colour *Black*, assuming the default palette is loaded.
+	pub const BLACK: TextBackgroundColour = TextBackgroundColour(0);
+	/// The colour *Dark Red*, assuming the default palette is loaded.
+	pub const DARK_RED: TextBackgroundColour = TextBackgroundColour(1);
+	/// The colour *Dark Green*, assuming the default palette is loaded.
+	pub const DARK_GREEN: TextBackgroundColour = TextBackgroundColour(2);
+	/// The colour *Orange*, assuming the default palette is loaded.
+	pub const ORANGE: TextBackgroundColour = TextBackgroundColour(3);
+	/// The colour *Blue*, assuming the default palette is loaded.
+	pub const BLUE: TextBackgroundColour = TextBackgroundColour(4);
+	/// The colour *Dark Magenta*, assuming the default palette is loaded.
+	pub const DARK_MAGENTA: TextBackgroundColour = TextBackgroundColour(5);
+	/// The colour *Dark Cyan*, assuming the default palette is loaded.
+	pub const DARK_CYAN: TextBackgroundColour = TextBackgroundColour(6);
+	/// The colour *Yellow*, assuming the default palette is loaded.
+	pub const YELLOW: TextBackgroundColour = TextBackgroundColour(7);
+
+	/// Make a new TextForegroundColour from an integer.
+	///
+	/// The value must be `<= Self::MAX`, or you will get an error.
+	pub const fn new(value: u8) -> Result<Self, Error> {
+		if value <= Self::MAX {
+			Ok(Self(value))
+		} else {
+			Err(Error::BadParam)
+		}
+	}
+
+	/// Make a new TextForegroundColour from an integer without bounds checking.
+	///
+	/// # Safety
+	///
+	/// The value must be `<= Self::MAX`, or you will get undefined behaviour.
+	pub const unsafe fn new_unchecked(value: u8) -> Self {
+		Self(value)
+	}
+
+	/// Convert to a raw integer
+	pub const fn as_u8(self) -> u8 {
+		self.0
+	}
+}
+
+impl Attr {
+	/// Make a new Attribute Value.
+	///
+	/// This is packed according to the format for the IBM *Video Graphics Array* (VGA) standard,
+	/// with a four-bit (`0..=15`) foreground colour, a three-bit (`0..=7`) background colour
+	/// and a single bit for *blink* which makes the text blink on and off roughly once a second.
+	///
+	/// ```text
+	/// +-------+-----+-----+-----+-----+-----+-----+-----+
+	/// + BLINK | BG2 | BG1 | BG0 | FG3 | FG2 | FG1 | FG0 |
+	/// +-------+-----+-----+-----+-----+-----+-----+-----+
+	/// ```
+	pub const fn new(fg: TextForegroundColour, bg: TextBackgroundColour, blink: bool) -> Attr {
+		let fg = fg.0 & 0b1111;
+		let bg = (bg.0 & 0b111) << 4;
+		let blink = if blink { 1 << 7 } else { 0 };
+		let value = blink | bg | fg;
+		Attr(value)
+	}
+
+	/// Get the foreground colour
+	pub const fn fg(&self) -> TextForegroundColour {
+		TextForegroundColour(self.0 & 0x0F)
+	}
+
+	/// Get the background colour
+	pub const fn bg(&self) -> TextBackgroundColour {
+		TextBackgroundColour((self.0 >> 4) & 0x07)
+	}
+
+	/// Is the text blinking?
+	pub const fn blink(&self) -> bool {
+		(self.0 & 0x80) != 0
+	}
+
+	/// Make a new attribute with the new foreground colour
+	pub fn set_fg(&mut self, fg: TextForegroundColour) {
+		*self = Self::new(fg, self.bg(), self.blink());
+	}
+
+	/// Make a new Selfibute with the new background colour
+	pub fn set_bg(&mut self, bg: TextBackgroundColour) {
+		*self = Self::new(self.fg(), bg, self.blink());
+	}
+
+	/// Make a new attribute with the new blink state
+	pub fn set_blink(&mut self, blink: bool) {
+		*self = Self::new(self.fg(), self.bg(), blink);
+	}
+
+	/// Convert this attribute into a raw 8-bit value
+	pub const fn as_u8(self) -> u8 {
+		self.0
+	}
+}
+
+impl GlyphAttr {
+	/// Make a new glyph/attribute pair.
+	pub const fn new(glyph: Glyph, attr: Attr) -> GlyphAttr {
+		let value: u16 = (glyph.0 as u16) + ((attr.0 as u16) << 8);
+		GlyphAttr(value)
+	}
+
+	/// Get the glyph component of this pair.
+	pub const fn glyph(self) -> Glyph {
+		Glyph(self.0 as u8)
+	}
+
+	/// Get the attribute component of this pair.
+	pub const fn attr(self) -> Attr {
+		Attr((self.0 >> 8) as u8)
+	}
 }
 
 // ============================================================================
-// Impls
+// Tests
 // ============================================================================
 
 #[cfg(test)]

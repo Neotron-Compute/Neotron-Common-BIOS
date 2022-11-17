@@ -1,6 +1,6 @@
-//! # Version
+//! # I²C Buses
 //!
-//! Contains the version API.
+//! I²C Bus related types.
 //!
 //! Note that all types in this file that are exported in the `Api` structure
 //! *must* be `#[repr(C)]` and ABI stable.
@@ -36,39 +36,20 @@
 // Types
 // ============================================================================
 
-/// Describes a semantic version.
-///
-/// The version is internally stored as a 32-bit value, but comprises an 8-bit
-/// major version, and 8-bit minor version and an 8-bit patch version.
-#[repr(transparent)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Version(pub u32);
+/// Describes an I²C Bus
+#[repr(C)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BusInfo {
+	/// Some human-readable name for this I²C device (e.g. `I²C0` or
+	/// `DDC0`)
+	pub name: crate::ApiString<'static>,
+}
 
 // ============================================================================
 // Impls
 // ============================================================================
 
-impl Version {
-	/// Create a new Version.
-	pub const fn new(major: u8, minor: u8, patch: u8) -> Version {
-		Version(u32::from_be_bytes([0x00, major, minor, patch]))
-	}
-
-	/// Get the major version portion.
-	pub const fn major(&self) -> u8 {
-		(self.0 >> 16) as u8
-	}
-
-	/// Get the minor version portion.
-	pub const fn minor(&self) -> u8 {
-		(self.0 >> 8) as u8
-	}
-
-	/// Get the patch version portion.
-	pub const fn patch(&self) -> u8 {
-		self.0 as u8
-	}
-}
+// None
 
 // ============================================================================
 // End of File

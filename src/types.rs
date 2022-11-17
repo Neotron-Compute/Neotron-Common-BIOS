@@ -2,24 +2,23 @@
 //!
 //! Contains types used in the Neotron API.
 //!
-//! Note that all types in this file *must* be `#[repr(C)]` and ABI stable.
-//!
-//! ## License
-//!
-//! > Copyright (C) The Neotron Developers, 2019-2022
-//! >
-//! > This program is free software: you can redistribute it and/or modify
-//! > it under the terms of the GNU General Public License as published by
-//! > the Free Software Foundation, either version 3 of the License, or
-//! > at your option) any later version.
-//! >
-//! > This program is distributed in the hope that it will be useful,
-//! > but WITHOUT ANY WARRANTY; without even the implied warranty of
-//! > MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//! > GNU General Public License for more details.
-//! >
-//! > You should have received a copy of the GNU General Public License
-//! > along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//! Note that all types in this file that are exported in the `Api` structure
+//! *must* be `#[repr(C)]` and ABI stable.
+
+// Copyright (C) The Neotron Developers, 2019-2022
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // ============================================================================
 // Imports
@@ -42,7 +41,7 @@
 pub type OsStartFn = extern "C" fn(&crate::Api) -> !;
 
 /// Any API function which can return an error, uses this error type.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum Error {
 	/// An invalid device number was given to the function.
@@ -55,6 +54,10 @@ pub enum Error {
 	/// The underlying hardware could not accept the given configuration. The
 	/// numeric code is BIOS implementation specific but may give some clues.
 	UnsupportedConfiguration(u16),
+	/// You used a Block Device API but there was no media in the drive
+	NoMediaFound,
+	/// You used a Block Device API asked for a block the device doesn't have
+	BlockOutOfBounds,
 }
 
 /// All API functions which can fail return this type. We don't use the
@@ -81,12 +84,13 @@ pub enum Option<T> {
 
 /// Describes a period of time, after which the BIOS should give up.
 #[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Timeout(u32);
 
 /// A Rust UTF-8 string, but compatible with FFI. Assume the lifetime is only
 /// valid until the callee returns to the caller. Is not null-terminated.
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ApiString<'a>(ApiByteSlice<'a>);
 
 /// A Rust u8 slice, but compatible with FFI. Assume the lifetime is only valid
@@ -125,6 +129,13 @@ pub struct Time {
 	/// Nanoseconds since the last second rolled over
 	pub nsecs: u32,
 }
+
+/// Represents a tick of some internal monotonic clock.
+///
+/// Usually runs at 1 kHz.
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct Ticks(pub u64);
 
 /// The kinds of memory we know about
 #[repr(C)]
@@ -181,6 +192,23 @@ impl<T> Option<T> {
 }
 
 // Timeout
+impl Timeout {
+	/// Create a new timeout, in milliseconds.
+	pub fn new_ms(milliseconds: u32) -> Timeout {
+		Timeout(milliseconds)
+	}
+
+	/// Create a new timeout, in seconds.
+	pub fn new_secs(seconds: u16) -> Timeout {
+		let milliseconds = u32::from(seconds) * 1000;
+		Self::new_ms(milliseconds)
+	}
+
+	/// Get the timeout, in milliseconds
+	pub fn get_ms(self) -> u32 {
+		self.0
+	}
+}
 
 // ApiString
 
@@ -222,14 +250,19 @@ impl core::fmt::Display for ApiString<'_> {
 // ApiByteSlice
 
 impl<'a> ApiByteSlice<'a> {
-	/// Create a new byte slice we can send over the FFI. NB: By doing this Rust
-	/// can't track lifetimes any more.
+	/// Create a new byte slice we can send over the FFI.
 	pub fn new(s: &'a [u8]) -> ApiByteSlice<'a> {
 		ApiByteSlice {
 			data: s.as_ptr(),
 			data_len: s.len(),
 			_phantom: core::marker::PhantomData,
 		}
+	}
+
+	/// Make an empty slice.
+	pub fn empty() -> ApiByteSlice<'static> {
+		static EMPTY: &[u8] = &[];
+		ApiByteSlice::new(EMPTY)
 	}
 
 	/// Turn this byte slice into a Rust byte slice.
@@ -259,6 +292,42 @@ impl<'a> From<&'a [u8]> for ApiByteSlice<'a> {
 	}
 }
 
+impl<'a> core::cmp::PartialEq for ApiByteSlice<'a> {
+	/// Check if two ApiByteSlices are equal.
+	///
+	/// We just make some actual slices and compare then.
+	fn eq(&self, rhs: &Self) -> bool {
+		if self.data_len != rhs.data_len {
+			return false;
+		}
+		let this_slice = self.as_slice();
+		let that_slice = rhs.as_slice();
+		this_slice == that_slice
+	}
+}
+
+impl<'a> core::cmp::Eq for ApiByteSlice<'a> {}
+
+impl<'a> core::cmp::Ord for ApiByteSlice<'a> {
+	/// Compare two ApiByteSlices.
+	///
+	/// We just make some actual slices and compare then.
+	fn cmp(&self, rhs: &Self) -> core::cmp::Ordering {
+		let this_slice = self.as_slice();
+		let that_slice = rhs.as_slice();
+		this_slice.cmp(that_slice)
+	}
+}
+
+impl<'a> core::cmp::PartialOrd for ApiByteSlice<'a> {
+	/// Compare two ApiByteSlices.
+	///
+	/// We are `Ord` so we can defer to that.
+	fn partial_cmp(&self, rhs: &Self) -> core::option::Option<core::cmp::Ordering> {
+		Some(self.cmp(rhs))
+	}
+}
+
 // ApiBuffer
 
 impl<'a> ApiBuffer<'a> {
@@ -275,14 +344,33 @@ impl<'a> ApiBuffer<'a> {
 		}
 	}
 
+	/// Make an empty slice.
+	pub fn empty() -> ApiBuffer<'static> {
+		ApiBuffer {
+			data: core::ptr::null_mut(),
+			data_len: 0,
+			_phantom: core::marker::PhantomData,
+		}
+	}
+
 	/// Turn this buffer into a Rust byte slice.
 	pub fn as_slice(&self) -> &[u8] {
-		unsafe { core::slice::from_raw_parts(self.data, self.data_len) }
+		if self.data.is_null() {
+			&[]
+		} else {
+			unsafe { core::slice::from_raw_parts(self.data, self.data_len) }
+		}
 	}
 
 	/// Turn this buffer into a Rust mutable byte slice.
-	pub fn as_mut_slice(&mut self) -> &mut [u8] {
-		unsafe { core::slice::from_raw_parts_mut(self.data, self.data_len) }
+	///
+	/// You will get `None` if the buffer is empty (i.e. has zero length).
+	pub fn as_mut_slice(&mut self) -> core::option::Option<&mut [u8]> {
+		if self.data.is_null() {
+			None
+		} else {
+			Some(unsafe { core::slice::from_raw_parts_mut(self.data, self.data_len) })
+		}
 	}
 }
 
@@ -319,8 +407,13 @@ impl core::fmt::Display for Time {
 impl From<&Time> for chrono::DateTime<chrono::Utc> {
 	fn from(time: &Time) -> Self {
 		use chrono::prelude::*;
-		let our_epoch = Utc.ymd(2001, 1, 1).and_hms(0, 0, 0).timestamp();
-		chrono::Utc.timestamp(i64::from(time.secs) + our_epoch, time.nsecs)
+		let our_epoch = Utc
+			.with_ymd_and_hms(2000, 1, 1, 0, 0, 0)
+			.unwrap()
+			.timestamp();
+		chrono::Utc
+			.timestamp_opt(i64::from(time.secs) + our_epoch, time.nsecs)
+			.unwrap()
 	}
 }
 

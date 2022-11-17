@@ -41,7 +41,42 @@ dual licensed as above, without any additional terms or conditions.
 
 ### Unreleased Changes
 
-* None
+### v0.7.0
+
+* Change `time_get` to `time_clock_get` 
+* Change `time_set` to `time_clock_set` 
+* Add `time_ticks_get` and `time_ticks_per_second`
+* Add `bus_interrupt_status`
+* Remove `delay`
+* Add back in the `block_XXX` API for reading/writing Block Devices.
+* Add idle function.
+* `memory_get_region` returns `Option`, not `Result`
+* Fix epoch used in conversion to chrono timestamp.
+
+### v0.6.1
+
+* No changes - v0.6.0 release was incorrect so re-releasing
+
+### v0.6.0
+
+* Removed 'block_X' APIs
+* Added 'bus_X' APIs
+* Added 'audio_X' APIs
+* Added 'i2c_X' APIs
+* Added 'video_get/set_palette' APIs
+* Added 'delay' API
+
+### v0.5.0
+
+* Added `serial_read` API
+* Added `video_mode_needs_vram` API
+* Added `hid_get_event` API
+* Added `hid_set_leds` API
+* Added `video_wait_for_line` API
+* Added `block_dev_get_info` API
+* Added `block_write` API
+* Added `block_read` API
+* Added `block_verify` API
 
 ### v0.4.0
 
