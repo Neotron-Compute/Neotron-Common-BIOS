@@ -41,6 +41,8 @@ dual licensed as above, without any additional terms or conditions.
 
 ### Unreleased Changes
 
+### v0.7.0
+
 * Change `time_get` to `time_clock_get` 
 * Change `time_set` to `time_clock_set` 
 * Add `time_ticks_get` and `time_ticks_per_second`
@@ -49,6 +51,7 @@ dual licensed as above, without any additional terms or conditions.
 * Add back in the `block_XXX` API for reading/writing Block Devices.
 * Add idle function.
 * `memory_get_region` returns `Option`, not `Result`
+* Fix epoch used in conversion to chrono timestamp.
 
 ### v0.6.1
 
