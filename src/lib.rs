@@ -89,17 +89,17 @@ pub struct Api {
 	/// that is an Operating System level design feature. These APIs just
 	/// reflect the raw hardware, in a similar manner to the registers exposed
 	/// by a memory-mapped UART peripheral.
-	pub serial_get_info: extern "C" fn(device: u8) -> crate::Option<serial::DeviceInfo>,
+	pub serial_get_info: extern "C" fn(device_id: u8) -> crate::Option<serial::DeviceInfo>,
 	/// Set the options for a given serial device. An error is returned if the
 	/// options are invalid for that serial device.
-	pub serial_configure: extern "C" fn(device: u8, config: serial::Config) -> crate::Result<()>,
+	pub serial_configure: extern "C" fn(device_id: u8, config: serial::Config) -> crate::Result<()>,
 	/// Write bytes to a serial port. There is no sense of 'opening' or
 	/// 'closing' the device - serial devices are always open. If the return
 	/// value is `Ok(n)`, the value `n` may be less than the size of the given
 	/// buffer. If so, that means not all of the data could be transmitted -
 	/// only the first `n` bytes were.
 	pub serial_write: extern "C" fn(
-		device: u8,
+		device_id: u8,
 		data: ApiByteSlice,
 		timeout: crate::Option<Timeout>,
 	) -> crate::Result<usize>,
@@ -110,7 +110,7 @@ pub struct Api {
 	/// could be received - only the first `n` bytes were (and hence only the
 	/// first `n` bytes of the given buffer now contain data).
 	pub serial_read: extern "C" fn(
-		device: u8,
+		device_id: u8,
 		data: ApiBuffer,
 		timeout: crate::Option<Timeout>,
 	) -> crate::Result<usize>,
@@ -320,7 +320,7 @@ pub struct Api {
 	///
 	/// I²C Bus 0 should be the one connected to the Neotron Bus.
 	/// I²C Bus 1 is typically the VGA DDC bus.
-	pub i2c_bus_get_info: extern "C" fn(i2c_bus: u8) -> crate::Option<i2c::BusInfo>,
+	pub i2c_bus_get_info: extern "C" fn(bus_id: u8) -> crate::Option<i2c::BusInfo>,
 	/// Transact with a I²C Device on an I²C Bus
 	///
 	/// * `i2c_bus` - Which I²C Bus to use
@@ -341,7 +341,7 @@ pub struct Api {
 	/// # Ok::<(), neotron_common_bios::Error>(())
 	/// ```
 	pub i2c_write_read: extern "C" fn(
-		i2c_bus: u8,
+		bus_id: u8,
 		i2c_device_address: u8,
 		tx: ApiByteSlice,
 		tx2: ApiByteSlice,
@@ -353,7 +353,7 @@ pub struct Api {
 	// ========================================================================
 	/// Get information about the Audio Mixer channels
 	pub audio_mixer_channel_get_info:
-		extern "C" fn(audio_mixer_id: u8) -> crate::Result<audio::MixerChannelInfo>,
+		extern "C" fn(audio_mixer_id: u8) -> crate::Option<audio::MixerChannelInfo>,
 	/// Set an Audio Mixer level
 	pub audio_mixer_channel_set_level:
 		extern "C" fn(audio_mixer_id: u8, level: u8) -> crate::Result<()>,
@@ -530,12 +530,12 @@ pub struct Api {
 	/// The set of devices is not expected to change at run-time - removal of
 	/// media is indicated with a boolean field in the
 	/// `block_dev::DeviceInfo` structure.
-	pub block_dev_get_info: extern "C" fn(device: u8) -> crate::Option<block_dev::DeviceInfo>,
+	pub block_dev_get_info: extern "C" fn(device_id: u8) -> crate::Option<block_dev::DeviceInfo>,
 	/// Eject a disk from the drive.
 	///
 	/// Will return an error if this device is not removable. Does not return an
 	/// error if the drive is already empty.
-	pub block_dev_eject: extern "C" fn(device: u8) -> crate::Result<()>,
+	pub block_dev_eject: extern "C" fn(device_id: u8) -> crate::Result<()>,
 	/// Write one or more sectors to a block device.
 	///
 	/// The function will block until all data is written. The array pointed
@@ -545,7 +545,7 @@ pub struct Api {
 	/// There are no requirements on the alignment of `data` but if it is
 	/// aligned, the BIOS may be able to use a higher-performance code path.
 	pub block_write: extern "C" fn(
-		device: u8,
+		device_id: u8,
 		start_block: block_dev::BlockIdx,
 		num_blocks: u8,
 		data: ApiByteSlice,
@@ -559,7 +559,7 @@ pub struct Api {
 	/// There are no requirements on the alignment of `data` but if it is
 	/// aligned, the BIOS may be able to use a higher-performance code path.
 	pub block_read: extern "C" fn(
-		device: u8,
+		device_id: u8,
 		start_block: block_dev::BlockIdx,
 		num_blocks: u8,
 		data: ApiBuffer,
@@ -574,7 +574,7 @@ pub struct Api {
 	/// There are no requirements on the alignment of `data` but if it is
 	/// aligned, the BIOS may be able to use a higher-performance code path.
 	pub block_verify: extern "C" fn(
-		device: u8,
+		device_id: u8,
 		start_block: block_dev::BlockIdx,
 		num_blocks: u8,
 		data: ApiByteSlice,
