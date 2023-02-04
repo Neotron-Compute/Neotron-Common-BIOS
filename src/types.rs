@@ -170,11 +170,25 @@ pub struct MemoryRegion {
 impl<T> Result<T> {
 	/// Obtain the inner value, or panic - just like `core::Result::unwrap`.
 	pub fn unwrap(self) -> T {
-		match self {
-			crate::Result::Ok(val) => val,
-			crate::Result::Err(e) => {
-				panic!("Unwrap called, got err {:?}", e);
-			}
+		let r: core::result::Result<T, Error> = self.into();
+		r.unwrap()
+	}
+}
+
+impl<T> From<core::result::Result<T, Error>> for Result<T> {
+	fn from(value: core::result::Result<T, Error>) -> Self {
+		match value {
+			Ok(inner) => Result::Ok(inner),
+			Err(inner) => Result::Err(inner),
+		}
+	}
+}
+
+impl<T> From<Result<T>> for core::result::Result<T, Error> {
+	fn from(value: Result<T>) -> Self {
+		match value {
+			Result::Ok(inner) => core::result::Result::Ok(inner),
+			Result::Err(inner) => core::result::Result::Err(inner),
 		}
 	}
 }
@@ -182,11 +196,25 @@ impl<T> Result<T> {
 impl<T> Option<T> {
 	/// Obtain the inner value, or panic - just like `core::Option::unwrap`.
 	pub fn unwrap(self) -> T {
-		match self {
-			crate::Option::Some(val) => val,
-			crate::Option::None => {
-				panic!("Unwrap called on empty option");
-			}
+		let o: core::option::Option<T> = self.into();
+		o.unwrap()
+	}
+}
+
+impl<T> From<core::option::Option<T>> for Option<T> {
+	fn from(value: core::option::Option<T>) -> Self {
+		match value {
+			Some(inner) => Option::Some(inner),
+			None => Option::None,
+		}
+	}
+}
+
+impl<T> From<Option<T>> for core::option::Option<T> {
+	fn from(value: Option<T>) -> Self {
+		match value {
+			Option::Some(inner) => core::option::Option::Some(inner),
+			Option::None => core::option::Option::None,
 		}
 	}
 }
