@@ -353,7 +353,7 @@ pub struct Api {
 	// ========================================================================
 	/// Get information about the Audio Mixer channels
 	pub audio_mixer_channel_get_info:
-		extern "C" fn(audio_mixer_id: u8) -> crate::Result<audio::MixerChannelInfo>,
+		extern "C" fn(audio_mixer_id: u8) -> crate::Option<audio::MixerChannelInfo>,
 	/// Set an Audio Mixer level
 	pub audio_mixer_channel_set_level:
 		extern "C" fn(audio_mixer_id: u8, level: u8) -> crate::Result<()>,
