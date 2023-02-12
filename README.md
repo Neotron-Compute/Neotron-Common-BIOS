@@ -41,6 +41,18 @@ dual licensed as above, without any additional terms or conditions.
 
 ### Unreleased Changes
 
+* None
+
+### v0.8.0
+
+* `audio_mixer_channel_get_info` now returns an `Option` not `Result`
+* Add `impl From<core::option::Option for Option`
+* Add `impl From<Option for core::option::Option`
+* Add `impl From<core::result::Result for Result`
+* Add `impl From<Result for core::result::Result`
+* Clarify that some parameters are actually expected to be numeric IDs
+* Use [`pc-keyboard::KeyCode`](https://crates.io/crates/pc-keyboard) to define Key Codes.
+
 ### v0.7.0
 
 * Change `time_get` to `time_clock_get` 
