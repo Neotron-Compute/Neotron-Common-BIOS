@@ -13,4 +13,4 @@ readme = "README.md"
 
 [dependencies]
 chrono = { version = "0.4", default-features=false }
-pc-keyboard = { path = "../pc-keyboard" }
+pc-keyboard = "0.7"
