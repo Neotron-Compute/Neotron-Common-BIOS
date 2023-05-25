@@ -140,7 +140,7 @@ pub struct Config {
 pub struct DeviceInfo {
 	/// Some human-readable name for this serial device (e.g. `RS232` or
 	/// `USB0`)
-	pub name: crate::ApiString<'static>,
+	pub name: crate::FfiString<'static>,
 	/// The type of this serial device
 	pub device_type: DeviceType,
 }
