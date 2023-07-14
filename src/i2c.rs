@@ -42,7 +42,7 @@
 pub struct BusInfo {
 	/// Some human-readable name for this I²C device (e.g. `I²C0` or
 	/// `DDC0`)
-	pub name: crate::ApiString<'static>,
+	pub name: crate::FfiString<'static>,
 }
 
 // ============================================================================

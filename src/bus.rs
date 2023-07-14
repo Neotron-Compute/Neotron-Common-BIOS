@@ -56,7 +56,7 @@ pub enum PeripheralKind {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PeripheralInfo {
 	/// A name, such as `slot0`
-	pub name: crate::ApiString<'static>,
+	pub name: crate::FfiString<'static>,
 	/// The kind of peripheral
 	pub kind: PeripheralKind,
 }

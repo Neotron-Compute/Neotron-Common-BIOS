@@ -1,16 +1,17 @@
 [package]
-name = "neotron-common-bios"
-version = "0.8.0"
 authors = ["Jonathan 'theJPster' Pallant <github@thejpster.org.uk>"]
-edition = "2018"
 description = "Common BIOS code and API for all Neotron systems."
-license = "GPL-3.0-or-later"
-repository = "https://github.com/neotron-compute/neotron-common-bios.git"
+edition = "2018"
 homepage = "https://github.com/neotron-compute/neotron-common-bios"
+license = "GPL-3.0-or-later"
+name = "neotron-common-bios"
 readme = "README.md"
+repository = "https://github.com/neotron-compute/neotron-common-bios.git"
+version = "0.8.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = { version = "0.4", default-features=false }
+chrono = {version = "0.4", default-features = false}
+neotron-ffi = "0.1"
 pc-keyboard = "0.7"
