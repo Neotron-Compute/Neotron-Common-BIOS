@@ -43,6 +43,10 @@ dual licensed as above, without any additional terms or conditions.
 
 * None
 
+### v0.9.0
+
+* Use types from [`neotron-ffi`](https://crates.io/crates/neotron-ffi) crate.
+
 ### v0.8.0
 
 * `audio_mixer_channel_get_info` now returns an `Option` not `Result`

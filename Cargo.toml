@@ -7,7 +7,7 @@ license = "GPL-3.0-or-later"
 name = "neotron-common-bios"
 readme = "README.md"
 repository = "https://github.com/neotron-compute/neotron-common-bios.git"
-version = "0.8.0"
+version = "0.9.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
