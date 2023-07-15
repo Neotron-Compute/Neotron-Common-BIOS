@@ -39,6 +39,8 @@ pub mod video;
 pub use types::*;
 pub use version::Version;
 
+pub use neotron_ffi::{FfiBuffer, FfiByteSlice, FfiOption, FfiResult, FfiString};
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -49,6 +51,12 @@ pub const API_VERSION: Version = Version::new(0, 6, 1);
 // ============================================================================
 // Types
 // ============================================================================
+
+/// Describes the result of an API call.
+///
+/// It's an FFI-safe Result [`FfiResult`], but the error type is fixed to be
+/// [`Error`].
+pub type ApiResult<T> = neotron_ffi::FfiResult<T, Error>;
 
 /// The BIOS API, expressed as a structure of function pointers.
 ///
@@ -72,7 +80,7 @@ pub struct Api {
 	/// also pass the length (excluding the null) to make it easy to construct
 	/// a Rust string. It is unspecified as to whether the string is located
 	/// in Flash ROM or RAM (but it's likely to be Flash ROM).
-	pub bios_version_get: extern "C" fn() -> ApiString<'static>,
+	pub bios_version_get: extern "C" fn() -> FfiString<'static>,
 
 	// ========================================================================
 	// Serial Port Support
@@ -89,10 +97,11 @@ pub struct Api {
 	/// that is an Operating System level design feature. These APIs just
 	/// reflect the raw hardware, in a similar manner to the registers exposed
 	/// by a memory-mapped UART peripheral.
-	pub serial_get_info: extern "C" fn(device_id: u8) -> crate::Option<serial::DeviceInfo>,
+	pub serial_get_info: extern "C" fn(device_id: u8) -> crate::FfiOption<serial::DeviceInfo>,
 	/// Set the options for a given serial device. An error is returned if the
 	/// options are invalid for that serial device.
-	pub serial_configure: extern "C" fn(device_id: u8, config: serial::Config) -> crate::Result<()>,
+	pub serial_configure:
+		extern "C" fn(device_id: u8, config: serial::Config) -> crate::ApiResult<()>,
 	/// Write bytes to a serial port. There is no sense of 'opening' or
 	/// 'closing' the device - serial devices are always open. If the return
 	/// value is `Ok(n)`, the value `n` may be less than the size of the given
@@ -100,9 +109,9 @@ pub struct Api {
 	/// only the first `n` bytes were.
 	pub serial_write: extern "C" fn(
 		device_id: u8,
-		data: ApiByteSlice,
-		timeout: crate::Option<Timeout>,
-	) -> crate::Result<usize>,
+		data: FfiByteSlice,
+		timeout: crate::FfiOption<Timeout>,
+	) -> crate::ApiResult<usize>,
 	/// Read bytes from a serial port. There is no sense of 'opening'
 	/// or 'closing' the device - serial devices are always open. If the
 	/// return value is `Ok(n)`, the value `n` may be less than the size of
@@ -111,9 +120,9 @@ pub struct Api {
 	/// first `n` bytes of the given buffer now contain data).
 	pub serial_read: extern "C" fn(
 		device_id: u8,
-		data: ApiBuffer,
-		timeout: crate::Option<Timeout>,
-	) -> crate::Result<usize>,
+		data: FfiBuffer,
+		timeout: crate::FfiOption<Timeout>,
+	) -> crate::ApiResult<usize>,
 
 	// ========================================================================
 	// Time Support
@@ -157,11 +166,11 @@ pub struct Api {
 	/// Configuration data is, to the BIOS, just a block of bytes of a given
 	/// length. How it stores them is up to the BIOS - it could be EEPROM, or
 	/// battery-backed SRAM.
-	pub configuration_get: extern "C" fn(buffer: ApiBuffer) -> crate::Result<usize>,
+	pub configuration_get: extern "C" fn(buffer: FfiBuffer) -> crate::ApiResult<usize>,
 	/// Set the configuration data block.
 	///
 	/// See `configuration_get`.
-	pub configuration_set: extern "C" fn(buffer: ApiByteSlice) -> crate::Result<()>,
+	pub configuration_set: extern "C" fn(buffer: FfiByteSlice) -> crate::ApiResult<()>,
 
 	// ========================================================================
 	// Video Output Support
@@ -180,7 +189,7 @@ pub struct Api {
 	/// `video_get_framebuffer` will return `null`. You must then supply a
 	/// pointer to a block of size `Mode::frame_size_bytes()` to
 	/// `video_set_framebuffer` before any video will appear.
-	pub video_set_mode: extern "C" fn(mode: video::Mode) -> crate::Result<()>,
+	pub video_set_mode: extern "C" fn(mode: video::Mode) -> crate::ApiResult<()>,
 	/// Returns the video mode the BIOS is currently in.
 	///
 	/// The OS should call this function immediately after start-up and note
@@ -218,7 +227,8 @@ pub struct Api {
 	/// The region pointed to by `start_address` must be large enough to
 	/// contain however much video memory is required by both the current
 	/// video mode.
-	pub video_set_framebuffer: unsafe extern "C" fn(start_address: *const u8) -> crate::Result<()>,
+	pub video_set_framebuffer:
+		unsafe extern "C" fn(start_address: *const u8) -> crate::ApiResult<()>,
 	/// Wait for the next occurence of the specified video scan-line.
 	///
 	/// In general we must assume that the video memory is read top-to-bottom
@@ -254,7 +264,7 @@ pub struct Api {
 	///
 	/// If you ask for an entry that is beyond the capabilities of the current
 	/// video mode, you get `None`.
-	pub video_get_palette: extern "C" fn(palette_idx: u8) -> crate::Option<video::RGBColour>,
+	pub video_get_palette: extern "C" fn(palette_idx: u8) -> crate::FfiOption<video::RGBColour>,
 	/// Set an entry in the colour palette.
 	///
 	/// Almost all video modes (except `Chunky16` and `Chunky32`) use a video
@@ -301,7 +311,7 @@ pub struct Api {
 	/// (if any), or from the top of Region 0 (although this reduces the maximum
 	/// application space available). The OS will prefer lower numbered regions
 	/// (other than Region 0), so faster memory should be listed first.
-	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::Option<types::MemoryRegion>,
+	pub memory_get_region: extern "C" fn(region_index: u8) -> crate::FfiOption<types::MemoryRegion>,
 
 	// ========================================================================
 	// Human Interface Device Support
@@ -309,9 +319,9 @@ pub struct Api {
 	/// Get the next available HID event, if any.
 	///
 	/// This function doesn't block. It will return `Ok(None)` if there is no event ready.
-	pub hid_get_event: extern "C" fn() -> crate::Result<crate::Option<hid::HidEvent>>,
+	pub hid_get_event: extern "C" fn() -> crate::ApiResult<crate::FfiOption<hid::HidEvent>>,
 	/// Control the keyboard LEDs.
-	pub hid_set_leds: extern "C" fn(leds: hid::KeyboardLeds) -> crate::Result<()>,
+	pub hid_set_leds: extern "C" fn(leds: hid::KeyboardLeds) -> crate::ApiResult<()>,
 
 	// ========================================================================
 	// I²C Bus Support
@@ -320,43 +330,43 @@ pub struct Api {
 	///
 	/// I²C Bus 0 should be the one connected to the Neotron Bus.
 	/// I²C Bus 1 is typically the VGA DDC bus.
-	pub i2c_bus_get_info: extern "C" fn(bus_id: u8) -> crate::Option<i2c::BusInfo>,
+	pub i2c_bus_get_info: extern "C" fn(bus_id: u8) -> crate::FfiOption<i2c::BusInfo>,
 	/// Transact with a I²C Device on an I²C Bus
 	///
 	/// * `i2c_bus` - Which I²C Bus to use
 	/// * `i2c_device_address` - The 7-bit I²C Device Address
-	/// * `tx` - the first list of bytes to send (use `ApiByteSlice::empty()` if not required)
-	/// * `tx2` - the second (and optional) list of bytes to send (use `ApiByteSlice::empty()` if not required)
-	/// * `rx` - the buffer to fill with read data (use `ApiBuffer::empty()` if not required)
+	/// * `tx` - the first list of bytes to send (use `FfiByteSlice::empty()` if not required)
+	/// * `tx2` - the second (and optional) list of bytes to send (use `FfiByteSlice::empty()` if not required)
+	/// * `rx` - the buffer to fill with read data (use `FfiBuffer::empty()` if not required)
 	///
 	/// ```no_run
 	/// # let api = neotron_common_bios::Api::make_dummy_api().unwrap();
-	/// # use neotron_common_bios::{ApiByteSlice, ApiBuffer};
+	/// # use neotron_common_bios::{FfiByteSlice, FfiBuffer};
 	/// // Read 16 bytes from the start of an EEPROM with device address 0x65 on Bus 0
 	/// let mut buf = [0u8; 16];
-	/// let _ = (api.i2c_write_read)(0, 0x65, ApiByteSlice::new(&[0x00, 0x00]), ApiByteSlice::empty(), ApiBuffer::new(&mut buf));
+	/// let _ = (api.i2c_write_read)(0, 0x65, FfiByteSlice::new(&[0x00, 0x00]), FfiByteSlice::empty(), FfiBuffer::new(&mut buf));
 	/// // Write those bytes to somewhere else in an EEPROM with device address 0x65 on Bus 0
 	/// // You can see now why it's useful to have *two* TX buffers available
-	/// let _ = (api.i2c_write_read)(0, 0x65, ApiByteSlice::new(&[0x00, 0x10]), ApiByteSlice::new(&buf), ApiBuffer::empty());
+	/// let _ = (api.i2c_write_read)(0, 0x65, FfiByteSlice::new(&[0x00, 0x10]), FfiByteSlice::new(&buf), FfiBuffer::empty());
 	/// # Ok::<(), neotron_common_bios::Error>(())
 	/// ```
 	pub i2c_write_read: extern "C" fn(
 		bus_id: u8,
 		i2c_device_address: u8,
-		tx: ApiByteSlice,
-		tx2: ApiByteSlice,
-		rx: ApiBuffer,
-	) -> crate::Result<()>,
+		tx: FfiByteSlice,
+		tx2: FfiByteSlice,
+		rx: FfiBuffer,
+	) -> crate::ApiResult<()>,
 
 	// ========================================================================
 	// Audio Support
 	// ========================================================================
 	/// Get information about the Audio Mixer channels
 	pub audio_mixer_channel_get_info:
-		extern "C" fn(audio_mixer_id: u8) -> crate::Option<audio::MixerChannelInfo>,
+		extern "C" fn(audio_mixer_id: u8) -> crate::FfiOption<audio::MixerChannelInfo>,
 	/// Set an Audio Mixer level
 	pub audio_mixer_channel_set_level:
-		extern "C" fn(audio_mixer_id: u8, level: u8) -> crate::Result<()>,
+		extern "C" fn(audio_mixer_id: u8, level: u8) -> crate::ApiResult<()>,
 	/// Configure the audio output.
 	///
 	/// If accepted, the audio output FIFO is flushed and the changes apply
@@ -376,9 +386,9 @@ pub struct Api {
 	/// you should supply as many samples as `audio_output_get_space` says
 	/// you need, not what you think you need based on the sample rate you
 	/// think you have.
-	pub audio_output_set_config: extern "C" fn(config: audio::Config) -> crate::Result<()>,
+	pub audio_output_set_config: extern "C" fn(config: audio::Config) -> crate::ApiResult<()>,
 	/// Get the audio output's current configuration.
-	pub audio_output_get_config: extern "C" fn() -> crate::Result<audio::Config>,
+	pub audio_output_get_config: extern "C" fn() -> crate::ApiResult<audio::Config>,
 	/// Send audio samples to the output FIFO.
 	///
 	/// The format of the samples (little-endian, 16-bit, etc), depends on the
@@ -397,12 +407,12 @@ pub struct Api {
 	///
 	/// There is only one hardware output stream so any mixing has to be
 	/// performed in software by the OS.
-	pub audio_output_data: unsafe extern "C" fn(samples: ApiByteSlice) -> crate::Result<usize>,
+	pub audio_output_data: unsafe extern "C" fn(samples: FfiByteSlice) -> crate::ApiResult<usize>,
 	/// Get audio buffer space.
 	///
 	/// How many samples in the current format can be sent to
 	/// `audio_output_data` without blocking?
-	pub audio_output_get_space: extern "C" fn() -> crate::Result<usize>,
+	pub audio_output_get_space: extern "C" fn() -> crate::ApiResult<usize>,
 	/// Configure the audio input.
 	///
 	/// If accepted, the audio input FIFO is flushed and the changes apply
@@ -419,9 +429,9 @@ pub struct Api {
 	/// application. For example, you might ask for 48,000 Hz but due to the
 	/// system clock frequency and other factors, a sample rate of 48,018 Hz
 	/// might actually be achieved.
-	pub audio_input_set_config: extern "C" fn(config: audio::Config) -> crate::Result<()>,
+	pub audio_input_set_config: extern "C" fn(config: audio::Config) -> crate::ApiResult<()>,
 	/// Get the audio input's current configuration.
-	pub audio_input_get_config: extern "C" fn() -> crate::Result<audio::Config>,
+	pub audio_input_get_config: extern "C" fn() -> crate::ApiResult<audio::Config>,
 	/// Get 16-bit stereo audio from the input FIFO.
 	///
 	/// The format of the samples (little-endian, 16-bit, etc), depends on the
@@ -434,12 +444,12 @@ pub struct Api {
 	///
 	/// If you don't call it often enough, there will be a buffer overflow and
 	/// audio will be dropped.
-	pub audio_input_data: unsafe extern "C" fn(samples: ApiBuffer) -> crate::Result<usize>,
+	pub audio_input_data: unsafe extern "C" fn(samples: FfiBuffer) -> crate::ApiResult<usize>,
 	/// Get audio buffer space.
 	///
 	/// How many samples in the current format can be read right now using
 	/// `audio_input_data`?
-	pub audio_input_get_count: extern "C" fn() -> crate::Result<usize>,
+	pub audio_input_get_count: extern "C" fn() -> crate::ApiResult<usize>,
 
 	// ========================================================================
 	// Neotron (SPI) Bus Support
@@ -451,9 +461,9 @@ pub struct Api {
 	/// blocked and must be deferred. Therefore you should try and release
 	/// the bus whilst waiting for things to happen (if your peripheral can
 	/// tolerate the CS line being de-activated at that time).
-	pub bus_select: extern "C" fn(peripheral_id: crate::Option<u8>),
+	pub bus_select: extern "C" fn(peripheral_id: crate::FfiOption<u8>),
 	/// Find out some details about each particular Neotron Bus Peripheral.
-	pub bus_get_info: extern "C" fn(peripheral_id: u8) -> crate::Option<bus::PeripheralInfo>,
+	pub bus_get_info: extern "C" fn(peripheral_id: u8) -> crate::FfiOption<bus::PeripheralInfo>,
 	/// Transact with the currently selected Neotron Bus Peripheral.
 	///
 	/// You should select a peripheral with `bus_select` first,
@@ -470,21 +480,21 @@ pub struct Api {
 	///
 	/// ```no_run
 	/// # let api = neotron_common_bios::Api::make_dummy_api().unwrap();
-	/// # use neotron_common_bios::{ApiByteSlice, ApiBuffer};
+	/// # use neotron_common_bios::{FfiByteSlice, FfiBuffer, FfiOption};
 	/// // Grab Peripheral 1 on the bus
-	/// let _ = (api.bus_select)(neotron_common_bios::Option::Some(1));
+	/// let _ = (api.bus_select)(FfiOption::Some(1));
 	/// // Read 16 bytes from Register 0 of the selected peripheral
 	/// let mut buf = [0u8; 16];
-	/// let _ = (api.bus_write_read)(ApiByteSlice::new(&[0, 16]), ApiByteSlice::empty(), ApiBuffer::new(&mut buf));
+	/// let _ = (api.bus_write_read)(FfiByteSlice::new(&[0, 16]), FfiByteSlice::empty(), FfiBuffer::new(&mut buf));
 	/// // Write those bytes to Register 2. You can see now why it's useful to
 	/// // have *two* TX buffers in the API
-	/// let _ = (api.bus_write_read)(ApiByteSlice::new(&[2, 16]), ApiByteSlice::new(&buf), ApiBuffer::empty());
+	/// let _ = (api.bus_write_read)(FfiByteSlice::new(&[2, 16]), FfiByteSlice::new(&buf), FfiBuffer::empty());
 	/// // Release the bus
-	/// let _ = (api.bus_select)(neotron_common_bios::Option::None);
+	/// let _ = (api.bus_select)(FfiOption::None);
 	/// # Ok::<(), neotron_common_bios::Error>(())
 	/// ```
 	pub bus_write_read:
-		extern "C" fn(tx: ApiByteSlice, tx2: ApiByteSlice, rx: ApiBuffer) -> crate::Result<()>,
+		extern "C" fn(tx: FfiByteSlice, tx2: FfiByteSlice, rx: FfiBuffer) -> crate::ApiResult<()>,
 	/// Exchange bytes with the currently selected Neotron Bus Peripheral.
 	///
 	/// You should select a peripheral with `bus_select` first,
@@ -497,18 +507,18 @@ pub struct Api {
 	///
 	/// ```no_run
 	/// # let api = neotron_common_bios::Api::make_dummy_api().unwrap();
-	/// # use neotron_common_bios::{ApiByteSlice, ApiBuffer};
+	/// # use neotron_common_bios::{FfiByteSlice, FfiBuffer, FfiOption};
 	/// // Grab Peripheral 1 on the bus
-	/// let _ = (api.bus_select)(neotron_common_bios::Option::Some(1));
+	/// let _ = (api.bus_select)(FfiOption::Some(1));
 	/// // Exchange four bytes with the peripheral
 	/// let mut buf = [0, 1, 2, 3];
-	/// let _ = (api.bus_exchange)(ApiBuffer::new(&mut buf));
+	/// let _ = (api.bus_exchange)(FfiBuffer::new(&mut buf));
 	/// // buf now contains whatever the peripheral sent us.
 	/// // Release the bus
-	/// let _ = (api.bus_select)(neotron_common_bios::Option::None);
+	/// let _ = (api.bus_select)(FfiOption::None);
 	/// # Ok::<(), neotron_common_bios::Error>(())
 	/// ```
-	pub bus_exchange: extern "C" fn(buffer: ApiBuffer) -> crate::Result<()>,
+	pub bus_exchange: extern "C" fn(buffer: FfiBuffer) -> crate::ApiResult<()>,
 	/// Get bus interrupt status.
 	///
 	/// Up to 32 interrupts can be returned as a single 32-bit value. A bit is
@@ -530,12 +540,12 @@ pub struct Api {
 	/// The set of devices is not expected to change at run-time - removal of
 	/// media is indicated with a boolean field in the
 	/// `block_dev::DeviceInfo` structure.
-	pub block_dev_get_info: extern "C" fn(device_id: u8) -> crate::Option<block_dev::DeviceInfo>,
+	pub block_dev_get_info: extern "C" fn(device_id: u8) -> crate::FfiOption<block_dev::DeviceInfo>,
 	/// Eject a disk from the drive.
 	///
 	/// Will return an error if this device is not removable. Does not return an
 	/// error if the drive is already empty.
-	pub block_dev_eject: extern "C" fn(device_id: u8) -> crate::Result<()>,
+	pub block_dev_eject: extern "C" fn(device_id: u8) -> crate::ApiResult<()>,
 	/// Write one or more sectors to a block device.
 	///
 	/// The function will block until all data is written. The array pointed
@@ -548,8 +558,8 @@ pub struct Api {
 		device_id: u8,
 		start_block: block_dev::BlockIdx,
 		num_blocks: u8,
-		data: ApiByteSlice,
-	) -> crate::Result<()>,
+		data: FfiByteSlice,
+	) -> crate::ApiResult<()>,
 	/// Read one or more sectors to a block device.
 	///
 	/// The function will block until all data is read. The array pointed
@@ -562,8 +572,8 @@ pub struct Api {
 		device_id: u8,
 		start_block: block_dev::BlockIdx,
 		num_blocks: u8,
-		data: ApiBuffer,
-	) -> crate::Result<()>,
+		data: FfiBuffer,
+	) -> crate::ApiResult<()>,
 	/// Verify one or more sectors on a block device (that is read them and
 	/// check they match the given data).
 	///
@@ -577,8 +587,8 @@ pub struct Api {
 		device_id: u8,
 		start_block: block_dev::BlockIdx,
 		num_blocks: u8,
-		data: ApiByteSlice,
-	) -> crate::Result<()>,
+		data: FfiByteSlice,
+	) -> crate::ApiResult<()>,
 
 	// ========================================================================
 	// Power management functions

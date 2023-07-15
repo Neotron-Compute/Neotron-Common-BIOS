@@ -89,7 +89,7 @@ pub enum Direction {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MixerChannelInfo {
 	/// The name of this Audio Mixer Channel (e.g. `Line In`)
-	pub name: crate::ApiString<'static>,
+	pub name: crate::FfiString<'static>,
 	/// Is this an Input or an Output?
 	pub direction: Direction,
 	/// What value of `current_level` gives the loudest audio? All values

@@ -55,7 +55,7 @@ pub enum DeviceType {
 pub struct DeviceInfo {
 	/// Some human-readable name for this block device (e.g. `SdCard0` or
 	/// `CF1`)
-	pub name: crate::ApiString<'static>,
+	pub name: crate::FfiString<'static>,
 	/// The kind of block device this is.
 	pub device_type: DeviceType,
 	/// The size of an addressable block, in bytes.
