@@ -43,6 +43,10 @@ dual licensed as above, without any additional terms or conditions.
 
 * None
 
+### v0.10.0
+
+* Change palette constants to match the VGA standard.
+
 ### v0.9.0
 
 * Use types from [`neotron-ffi`](https://crates.io/crates/neotron-ffi) crate.
