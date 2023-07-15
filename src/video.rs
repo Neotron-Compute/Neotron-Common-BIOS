@@ -411,37 +411,37 @@ impl TextForegroundColour {
 	/// The highest value a VGA text-mode foreground colour can have.
 	pub const MAX: u8 = 15;
 
-	/// The colour *Black*, assuming the default palette is loaded.
+	/// The colour *Black* in the default palette
 	pub const BLACK: Self = Self(0);
-	/// The colour *Dark Red*, assuming the default palette is loaded.
-	pub const DARK_RED: Self = Self(1);
-	/// The colour *Dark Green*, assuming the default palette is loaded.
-	pub const DARK_GREEN: Self = Self(2);
-	/// The colour *Orange*, assuming the default palette is loaded.
-	pub const ORANGE: Self = Self(3);
-	/// The colour *Blue*, assuming the default palette is loaded.
-	pub const BLUE: Self = Self(4);
-	/// The colour *Dark Magenta*, assuming the default palette is loaded.
-	pub const DARK_MAGENTA: Self = Self(5);
-	/// The colour *Dark Cyan*, assuming the default palette is loaded.
-	pub const DARK_CYAN: Self = Self(6);
-	/// The colour *Yellow*, assuming the default palette is loaded.
-	pub const YELLOW: Self = Self(7);
-	/// The colour *Grey*, assuming the default palette is loaded.
-	pub const GREY: Self = Self(8);
-	/// The colour *Bright Red*, assuming the default palette is loaded.
-	pub const BRIGHT_RED: Self = Self(9);
-	/// The colour *Bright Green*, assuming the default palette is loaded.
-	pub const BRIGHT_GREEN: Self = Self(10);
-	/// The colour *Bright Yellow*, assuming the default palette is loaded.
-	pub const BRIGHT_YELLOW: Self = Self(11);
-	/// The colour *Bright Blue*, assuming the default palette is loaded.
-	pub const BRIGHT_BLUE: Self = Self(12);
-	/// The colour *Bright Magenta*, assuming the default palette is loaded.
-	pub const BRIGHT_MAGENTA: Self = Self(13);
-	/// The colour *Bright Cyan*, assuming the default palette is loaded.
-	pub const BRIGHT_CYAN: Self = Self(14);
-	/// The colour *White*, assuming the default palette is loaded.
+	/// The colour *Blue* in the default palette
+	pub const BLUE: Self = Self(1);
+	/// The colour *Green* in the default palette
+	pub const GREEN: Self = Self(2);
+	/// The colour *Cyan* in the default palette
+	pub const CYAN: Self = Self(3);
+	/// The colour *Red* in the default palette
+	pub const RED: Self = Self(4);
+	/// The colour *Magenta* in the default palette
+	pub const MAGENTA: Self = Self(5);
+	/// The colour *Brown* in the default palette
+	pub const BROWN: Self = Self(6);
+	/// The colour *Light Gray* in the default palette
+	pub const LIGHT_GRAY: Self = Self(7);
+	/// The colour *Dark Gray* in the default palette
+	pub const DARK_GRAY: Self = Self(8);
+	/// The colour *Light Blue* in the default palette
+	pub const LIGHT_BLUE: Self = Self(9);
+	/// The colour *Light Green* in the default palette
+	pub const LIGHT_GREEN: Self = Self(10);
+	/// The colour *Light Cyan* in the default palette
+	pub const LIGHT_CYAN: Self = Self(11);
+	/// The colour *Light Red* in the default palette
+	pub const LIGHT_RED: Self = Self(12);
+	/// The colour *Pink* in the default palette
+	pub const PINK: Self = Self(13);
+	/// The colour *Yellow* in the default palette
+	pub const YELLOW: Self = Self(14);
+	/// The colour *White* in the default palette
 	pub const WHITE: Self = Self(15);
 
 	/// Make a new `TextForegroundColour` from an integer.
@@ -474,22 +474,22 @@ impl TextBackgroundColour {
 	/// The highest value a VGA text-mode background colour can have.
 	pub const MAX: u8 = 7;
 
-	/// The colour *Black*, assuming the default palette is loaded.
-	pub const BLACK: TextBackgroundColour = TextBackgroundColour(0);
-	/// The colour *Dark Red*, assuming the default palette is loaded.
-	pub const DARK_RED: TextBackgroundColour = TextBackgroundColour(1);
-	/// The colour *Dark Green*, assuming the default palette is loaded.
-	pub const DARK_GREEN: TextBackgroundColour = TextBackgroundColour(2);
-	/// The colour *Orange*, assuming the default palette is loaded.
-	pub const ORANGE: TextBackgroundColour = TextBackgroundColour(3);
-	/// The colour *Blue*, assuming the default palette is loaded.
-	pub const BLUE: TextBackgroundColour = TextBackgroundColour(4);
-	/// The colour *Dark Magenta*, assuming the default palette is loaded.
-	pub const DARK_MAGENTA: TextBackgroundColour = TextBackgroundColour(5);
-	/// The colour *Dark Cyan*, assuming the default palette is loaded.
-	pub const DARK_CYAN: TextBackgroundColour = TextBackgroundColour(6);
-	/// The colour *Yellow*, assuming the default palette is loaded.
-	pub const YELLOW: TextBackgroundColour = TextBackgroundColour(7);
+	/// The colour *Black* in the default palette
+	pub const BLACK: Self = Self(0);
+	/// The colour *Blue* in the default palette
+	pub const BLUE: Self = Self(1);
+	/// The colour *Green* in the default palette
+	pub const GREEN: Self = Self(2);
+	/// The colour *Cyan* in the default palette
+	pub const CYAN: Self = Self(3);
+	/// The colour *Red* in the default palette
+	pub const RED: Self = Self(4);
+	/// The colour *Magenta* in the default palette
+	pub const MAGENTA: Self = Self(5);
+	/// The colour *Brown* in the default palette
+	pub const BROWN: Self = Self(6);
+	/// The colour *Light Gray* in the default palette
+	pub const LIGHT_GRAY: Self = Self(7);
 
 	/// Make a new TextForegroundColour from an integer.
 	///
