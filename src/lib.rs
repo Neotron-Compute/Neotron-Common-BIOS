@@ -598,6 +598,31 @@ pub struct Api {
 	/// On a microcontroller, this will wait for interrupts. Running in an
 	/// emulator, this will sleep the thread for a while.
 	pub power_idle: extern "C" fn(),
+	/// The OS will call this function to turn the power off.
+	///
+	/// This function will not return, because the system will be switched off
+	/// before it can return. In the event on an error, this function will hang
+	/// instead.
+	pub power_off: extern "C" fn() -> !,
+	/// The OS will call this function to reboot the system.
+	///
+	/// This function will not return, because the system will be rebooted
+	/// before it can return. In the event on an error, this function will hang
+	/// instead.
+	pub power_reboot: extern "C" fn() -> !,
+
+	// ========================================================================
+	// Mutex functions
+	// ========================================================================
+	/// Performs a compare-and-swap on `value`.
+	///
+	/// * If `value == old_value`, sets `value = new_value` and returns `true`
+	/// * If `value != old_value`, returns `false`
+	pub compare_and_swap_bool: extern "C" fn(
+		value: &core::sync::atomic::AtomicBool,
+		old_value: bool,
+		new_value: bool,
+	) -> bool,
 }
 
 // ============================================================================
