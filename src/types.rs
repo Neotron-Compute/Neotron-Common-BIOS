@@ -105,6 +105,21 @@ pub struct MemoryRegion {
 	pub kind: MemoryKind,
 }
 
+/// The kinds of power control we can do.
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub enum PowerMode {
+	/// Turn the system power off
+	Off,
+	/// Reboot the main processor
+	Reset,
+	/// Reboot the main processor, but tell it to enter a bootloader mode for
+	/// programming. Precisely what this will do will depend upon the BIOS. Some
+	/// BIOSes will not have a bootloader mode and this will do a regular
+	/// reboot.
+	Bootloader,
+}
+
 // ============================================================================
 // Impls
 // ============================================================================

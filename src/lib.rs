@@ -598,18 +598,12 @@ pub struct Api {
 	/// On a microcontroller, this will wait for interrupts. Running in an
 	/// emulator, this will sleep the thread for a while.
 	pub power_idle: extern "C" fn(),
-	/// The OS will call this function to turn the power off.
+	/// The OS will call this function to control power on this system.
 	///
 	/// This function will not return, because the system will be switched off
 	/// before it can return. In the event on an error, this function will hang
 	/// instead.
-	pub power_off: extern "C" fn() -> !,
-	/// The OS will call this function to reboot the system.
-	///
-	/// This function will not return, because the system will be rebooted
-	/// before it can return. In the event on an error, this function will hang
-	/// instead.
-	pub power_reboot: extern "C" fn() -> !,
+	pub power_control: extern "C" fn(mode: PowerMode) -> !,
 
 	// ========================================================================
 	// Mutex functions
