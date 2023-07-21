@@ -43,6 +43,11 @@ dual licensed as above, without any additional terms or conditions.
 
 * None
 
+### v0.11.0
+
+* Add compare_and_swap_bool function
+* Add power_control function
+
 ### v0.10.0
 
 * Change palette constants to match the VGA standard.
