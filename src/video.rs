@@ -185,6 +185,12 @@ impl Mode {
 
 	/// Create a new video mode
 	#[inline]
+	pub const fn new(timing: Timing, format: Format) -> Mode {
+		Self::new_with_scaling(timing, format, Scaling::None)
+	}
+
+	/// Create a new video mode
+	#[inline]
 	pub const fn new_with_scaling(timing: Timing, format: Format, scaling: Scaling) -> Mode {
 		let t = timing as u8;
 		let f = format as u8;
@@ -198,12 +204,6 @@ impl Mode {
 			}
 		};
 		Mode(mode)
-	}
-
-	/// Create a new video mode
-	#[inline]
-	pub const fn new(timing: Timing, format: Format) -> Mode {
-		Self::new_with_scaling(timing, format, Scaling::None)
 	}
 
 	/// Create a new double-height video mode.
