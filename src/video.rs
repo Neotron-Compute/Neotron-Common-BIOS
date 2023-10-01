@@ -122,6 +122,20 @@ pub enum Timing {
 	T800x600 = 2,
 }
 
+/// Describes how a video mode is caled
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub enum Scaling {
+	/// No video scaling
+	None,
+	/// Image is stretched to 2x usual width
+	DoubleWidth,
+	/// Image is stretched to 2x usual height
+	DoubleHeight,
+	/// Image is stretched to 2x usual width and 2x usual height
+	DoubleWidthAndHeight,
+}
+
 /// Describes an RGB colour-triple.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -171,11 +185,25 @@ impl Mode {
 
 	/// Create a new video mode
 	#[inline]
-	pub const fn new(timing: Timing, format: Format) -> Mode {
+	pub const fn new_with_scaling(timing: Timing, format: Format, scaling: Scaling) -> Mode {
 		let t = timing as u8;
 		let f = format as u8;
 		let mode = (t << Self::TIMING_SHIFT) | (f << Self::FORMAT_SHIFT);
+		let mode = match scaling {
+			Scaling::None => mode,
+			Scaling::DoubleWidth => mode | 1 << Self::HORIZ_2X_SHIFT,
+			Scaling::DoubleHeight => mode | 1 << Self::VERT_2X_SHIFT,
+			Scaling::DoubleWidthAndHeight => {
+				mode | 1 << Self::HORIZ_2X_SHIFT | 1 << Self::VERT_2X_SHIFT
+			}
+		};
 		Mode(mode)
+	}
+
+	/// Create a new video mode
+	#[inline]
+	pub const fn new(timing: Timing, format: Format) -> Mode {
+		Self::new_with_scaling(timing, format, Scaling::None)
 	}
 
 	/// Create a new double-height video mode.
@@ -183,7 +211,7 @@ impl Mode {
 	/// This will set the 'Vert 2x' bit.
 	#[inline]
 	pub const fn new_double_height(timing: Timing, format: Format) -> Mode {
-		Mode(Self::new(timing, format).0 | 1 << Self::VERT_2X_SHIFT)
+		Self::new_with_scaling(timing, format, Scaling::DoubleHeight)
 	}
 
 	/// Create a new double-width video mode.
@@ -191,7 +219,7 @@ impl Mode {
 	/// This will set the 'Horiz 2x' bit.
 	#[inline]
 	pub const fn new_double_width(timing: Timing, format: Format) -> Mode {
-		Mode(Self::new(timing, format).0 | 1 << Self::HORIZ_2X_SHIFT)
+		Self::new_with_scaling(timing, format, Scaling::DoubleWidth)
 	}
 
 	/// Create a new double-width, double-height video mode.
@@ -199,7 +227,7 @@ impl Mode {
 	/// This will set the 'Horiz 2x' and the 'Vert 2x' bits.
 	#[inline]
 	pub const fn new_double_height_width(timing: Timing, format: Format) -> Mode {
-		Mode(Self::new(timing, format).0 | 1 << Self::VERT_2X_SHIFT | 1 << Self::HORIZ_2X_SHIFT)
+		Self::new_with_scaling(timing, format, Scaling::DoubleWidthAndHeight)
 	}
 
 	/// If true, this mode is 2x taller than nominal.
@@ -335,11 +363,10 @@ impl Mode {
 	/// Note this is only the nominal value. VESA allows +/- 0.5% tolerance.
 	#[inline]
 	pub const fn pixel_clock_hz(self) -> u32 {
-		match (self.0 >> Self::TIMING_SHIFT) & 0b111 {
-			0 => 25175000,
-			1 => 25175000,
-			2 => 40000000,
-			_ => 0,
+		match self.timing() {
+			Timing::T640x480 => 25175000,
+			Timing::T640x400 => 25175000,
+			Timing::T800x600 => 40000000,
 		}
 	}
 
@@ -361,6 +388,20 @@ impl Mode {
 		self.0
 	}
 
+	/// Try and make a mode from an integer.
+	///
+	/// Note all mode integers are valid.
+	#[inline]
+	pub const fn try_from_u8(mode_value: u8) -> Option<Mode> {
+		// All formats are valid.
+		// All scaling bits are valid.
+		// But some timings are not valid. So check for those.
+		match (mode_value >> Self::TIMING_SHIFT) & 0b111 {
+			0..=2 => Some(Mode(mode_value)),
+			_ => None,
+		}
+	}
+
 	/// Make a mode from an integer.
 	///
 	/// # Safety
@@ -370,6 +411,25 @@ impl Mode {
 	#[inline]
 	pub unsafe fn from_u8(mode_value: u8) -> Mode {
 		Mode(mode_value)
+	}
+}
+
+impl core::fmt::Display for Format {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		write!(
+			f,
+			"{}",
+			match self {
+				Format::Text8x16 => "8x16 Text",
+				Format::Text8x8 => "8x8 Text",
+				Format::Chunky32 => "32 bpp True Colour",
+				Format::Chunky16 => "16 bpp High Colour",
+				Format::Chunky8 => "8 bpp Indexed",
+				Format::Chunky4 => "4 bpp Indexed",
+				Format::Chunky2 => "2 bpp Indexed",
+				Format::Chunky1 => "1 bpp Indexed",
+			}
+		)
 	}
 }
 
