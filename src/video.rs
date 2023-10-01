@@ -170,6 +170,7 @@ impl Mode {
 	const FORMAT_SHIFT: usize = 0;
 
 	/// Create a new video mode
+	#[inline]
 	pub const fn new(timing: Timing, format: Format) -> Mode {
 		let t = timing as u8;
 		let f = format as u8;
@@ -180,6 +181,7 @@ impl Mode {
 	/// Create a new double-height video mode.
 	///
 	/// This will set the 'Vert 2x' bit.
+	#[inline]
 	pub const fn new_double_height(timing: Timing, format: Format) -> Mode {
 		Mode(Self::new(timing, format).0 | 1 << Self::VERT_2X_SHIFT)
 	}
@@ -187,6 +189,7 @@ impl Mode {
 	/// Create a new double-width video mode.
 	///
 	/// This will set the 'Horiz 2x' bit.
+	#[inline]
 	pub const fn new_double_width(timing: Timing, format: Format) -> Mode {
 		Mode(Self::new(timing, format).0 | 1 << Self::HORIZ_2X_SHIFT)
 	}
@@ -194,6 +197,7 @@ impl Mode {
 	/// Create a new double-width, double-height video mode.
 	///
 	/// This will set the 'Horiz 2x' and the 'Vert 2x' bits.
+	#[inline]
 	pub const fn new_double_height_width(timing: Timing, format: Format) -> Mode {
 		Mode(Self::new(timing, format).0 | 1 << Self::VERT_2X_SHIFT | 1 << Self::HORIZ_2X_SHIFT)
 	}
@@ -201,6 +205,7 @@ impl Mode {
 	/// If true, this mode is 2x taller than nominal.
 	///
 	/// e.g. a 640x480 mode is dropped to 640x240.
+	#[inline]
 	pub const fn is_vert_2x(self) -> bool {
 		(self.0 & (1 << Self::VERT_2X_SHIFT)) != 0
 	}
@@ -208,6 +213,7 @@ impl Mode {
 	/// If true, this mode is 2x wider than nominal.
 	///
 	/// e.g. a 640x480 mode is dropped to 320x480.
+	#[inline]
 	pub const fn is_horiz_2x(self) -> bool {
 		(self.0 & (1 << Self::HORIZ_2X_SHIFT)) != 0
 	}
@@ -216,6 +222,7 @@ impl Mode {
 	///
 	/// This could be a line of pixels or a line of characters, depending on
 	/// the mode.
+	#[inline]
 	pub const fn line_size_bytes(self) -> usize {
 		let horizontal_pixels = self.horizontal_pixels() as usize;
 
@@ -231,6 +238,7 @@ impl Mode {
 	}
 
 	/// Gets how big a line is in glyph-attribute pairs.
+	#[inline]
 	pub const fn text_width(self) -> Option<u16> {
 		let horizontal_pixels = self.horizontal_pixels();
 
@@ -241,6 +249,7 @@ impl Mode {
 	}
 
 	/// Gets how many rows of text are on screen.
+	#[inline]
 	pub const fn text_height(self) -> Option<u16> {
 		match self.format() {
 			Format::Text8x8 => Some(self.vertical_lines() / 8),
@@ -250,6 +259,7 @@ impl Mode {
 	}
 
 	/// Gets how big the frame is, in bytes.
+	#[inline]
 	pub const fn frame_size_bytes(self) -> usize {
 		let line_size = self.line_size_bytes();
 		let num_lines = self.vertical_lines() as usize
@@ -262,6 +272,7 @@ impl Mode {
 	}
 
 	/// Get the pixel format for this mode.
+	#[inline]
 	pub const fn format(self) -> Format {
 		match (self.0 >> Self::FORMAT_SHIFT) & 0b111 {
 			0 => Format::Text8x16,
@@ -277,6 +288,7 @@ impl Mode {
 	}
 
 	/// Get the timing for this mode.
+	#[inline]
 	pub const fn timing(self) -> Timing {
 		match (self.0 >> Self::TIMING_SHIFT) & 0b111 {
 			0 => Timing::T640x480,
@@ -290,6 +302,7 @@ impl Mode {
 	///
 	/// The size of the sync pulse and the blanking period is for the BIOS to
 	/// handle internally. The OS only cares about visible pixels.
+	#[inline]
 	pub const fn horizontal_pixels(self) -> u16 {
 		match (self.timing(), self.is_horiz_2x()) {
 			(Timing::T640x480, false) => 640,
@@ -305,6 +318,7 @@ impl Mode {
 	///
 	/// The size of the sync pulse and the blanking period is for the BIOS to
 	/// handle internally. The OS only cares about visible lines.
+	#[inline]
 	pub const fn vertical_lines(self) -> u16 {
 		match (self.timing(), self.is_vert_2x()) {
 			(Timing::T640x480, false) => 480,
@@ -319,6 +333,7 @@ impl Mode {
 	/// Get the nominal pixel clock.
 	///
 	/// Note this is only the nominal value. VESA allows +/- 0.5% tolerance.
+	#[inline]
 	pub const fn pixel_clock_hz(self) -> u32 {
 		match (self.0 >> Self::TIMING_SHIFT) & 0b111 {
 			0 => 25175000,
@@ -331,6 +346,7 @@ impl Mode {
 	/// Get the nominal frame rate.
 	///
 	/// Note this is only the nominal value. VESA allows +/- 0.5% tolerance.
+	#[inline]
 	pub const fn frame_rate_hz(self) -> u32 {
 		match self.timing() {
 			Timing::T640x480 => 60,
@@ -340,6 +356,7 @@ impl Mode {
 	}
 
 	/// Get the mode as an integer.
+	#[inline]
 	pub const fn as_u8(self) -> u8 {
 		self.0
 	}
@@ -350,6 +367,7 @@ impl Mode {
 	///
 	/// The integer `mode_value` must represent a valid mode, as returned from
 	/// `Mode::as_u8`. This function does not validate the given value.
+	#[inline]
 	pub unsafe fn from_u8(mode_value: u8) -> Mode {
 		Mode(mode_value)
 	}
@@ -374,16 +392,19 @@ impl RGBColour {
 	pub const MAGENTA: RGBColour = RGBColour::from_rgb(0xFF, 0, 0xFF);
 
 	/// Create a new RGB colour from a packed 32-bit value
+	#[inline]
 	pub const fn from_packed(packed: u32) -> RGBColour {
 		RGBColour(packed)
 	}
 
 	/// Get a packed 32-bit value from this RGB Colour
+	#[inline]
 	pub const fn as_packed(self) -> u32 {
 		self.0
 	}
 
 	/// Create a new RGB colour
+	#[inline]
 	pub const fn from_rgb(red: u8, green: u8, blue: u8) -> RGBColour {
 		let mut colour = (red as u32) << 16;
 		colour |= (green as u32) << 8;
@@ -392,16 +413,19 @@ impl RGBColour {
 	}
 
 	/// Get the red-channel value
+	#[inline]
 	pub const fn red(self) -> u8 {
 		((self.0 >> 16) & 0xFF) as u8
 	}
 
 	/// Get the green-channel value
+	#[inline]
 	pub const fn green(self) -> u8 {
 		((self.0 >> 8) & 0xFF) as u8
 	}
 
 	/// Get the blue-channel value
+	#[inline]
 	pub const fn blue(self) -> u8 {
 		(self.0 & 0xFF) as u8
 	}
@@ -447,6 +471,7 @@ impl TextForegroundColour {
 	/// Make a new `TextForegroundColour` from an integer.
 	///
 	/// The value must be `<= Self::MAX`, or you will get an error.
+	#[inline]
 	pub const fn new(value: u8) -> Result<Self, Error> {
 		if value <= Self::MAX {
 			Ok(Self(value))
@@ -460,11 +485,13 @@ impl TextForegroundColour {
 	/// # Safety
 	///
 	/// The value must be `<= Self::MAX`, or you will get undefined behaviour.
+	#[inline]
 	pub const unsafe fn new_unchecked(value: u8) -> Self {
 		Self(value)
 	}
 
 	/// Convert to a raw integer
+	#[inline]
 	pub const fn as_u8(self) -> u8 {
 		self.0
 	}
@@ -494,6 +521,7 @@ impl TextBackgroundColour {
 	/// Make a new TextForegroundColour from an integer.
 	///
 	/// The value must be `<= Self::MAX`, or you will get an error.
+	#[inline]
 	pub const fn new(value: u8) -> Result<Self, Error> {
 		if value <= Self::MAX {
 			Ok(Self(value))
@@ -512,6 +540,7 @@ impl TextBackgroundColour {
 	}
 
 	/// Convert to a raw integer
+	#[inline]
 	pub const fn as_u8(self) -> u8 {
 		self.0
 	}
@@ -529,6 +558,7 @@ impl Attr {
 	/// + BLINK | BG2 | BG1 | BG0 | FG3 | FG2 | FG1 | FG0 |
 	/// +-------+-----+-----+-----+-----+-----+-----+-----+
 	/// ```
+	#[inline]
 	pub const fn new(fg: TextForegroundColour, bg: TextBackgroundColour, blink: bool) -> Attr {
 		let fg = fg.0 & 0b1111;
 		let bg = (bg.0 & 0b111) << 4;
@@ -538,36 +568,43 @@ impl Attr {
 	}
 
 	/// Get the foreground colour
+	#[inline]
 	pub const fn fg(&self) -> TextForegroundColour {
 		TextForegroundColour(self.0 & 0x0F)
 	}
 
 	/// Get the background colour
+	#[inline]
 	pub const fn bg(&self) -> TextBackgroundColour {
 		TextBackgroundColour((self.0 >> 4) & 0x07)
 	}
 
 	/// Is the text blinking?
+	#[inline]
 	pub const fn blink(&self) -> bool {
 		(self.0 & 0x80) != 0
 	}
 
 	/// Make a new attribute with the new foreground colour
+	#[inline]
 	pub fn set_fg(&mut self, fg: TextForegroundColour) {
 		*self = Self::new(fg, self.bg(), self.blink());
 	}
 
 	/// Make a new Selfibute with the new background colour
+	#[inline]
 	pub fn set_bg(&mut self, bg: TextBackgroundColour) {
 		*self = Self::new(self.fg(), bg, self.blink());
 	}
 
 	/// Make a new attribute with the new blink state
+	#[inline]
 	pub fn set_blink(&mut self, blink: bool) {
 		*self = Self::new(self.fg(), self.bg(), blink);
 	}
 
 	/// Convert this attribute into a raw 8-bit value
+	#[inline]
 	pub const fn as_u8(self) -> u8 {
 		self.0
 	}
@@ -575,17 +612,20 @@ impl Attr {
 
 impl GlyphAttr {
 	/// Make a new glyph/attribute pair.
+	#[inline]
 	pub const fn new(glyph: Glyph, attr: Attr) -> GlyphAttr {
 		let value: u16 = (glyph.0 as u16) + ((attr.0 as u16) << 8);
 		GlyphAttr(value)
 	}
 
 	/// Get the glyph component of this pair.
+	#[inline]
 	pub const fn glyph(self) -> Glyph {
 		Glyph(self.0 as u8)
 	}
 
 	/// Get the attribute component of this pair.
+	#[inline]
 	pub const fn attr(self) -> Attr {
 		Attr((self.0 >> 8) as u8)
 	}
