@@ -286,6 +286,12 @@ impl Mode {
 		}
 	}
 
+	/// Is this a text mode?
+	#[inline]
+	pub const fn is_text_mode(self) -> bool {
+		matches!(self.format(), Format::Text8x8 | Format::Text8x16)
+	}
+
 	/// Gets how big the frame is, in bytes.
 	#[inline]
 	pub const fn frame_size_bytes(self) -> usize {
