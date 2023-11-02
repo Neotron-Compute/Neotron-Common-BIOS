@@ -24,7 +24,7 @@
 // Imports
 // ============================================================================
 
-// None
+use crate::make_ffi_enum;
 
 // ============================================================================
 // Constants
@@ -36,26 +36,24 @@
 // Types
 // ============================================================================
 
-/// Defines the format of each sample (mono, stereo, 8-bit, 16-bit, etc).
-#[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum SampleFormat {
-	/// 8-bit, signed, mono samples.
+make_ffi_enum!("Defines the format of each sample (mono, stereo, 8-bit, 16-bit, etc).",
+	SampleFormat, FfiSampleFormat, {
+	#[doc = "8-bit, signed, mono samples"]
 	EightBitMono,
-	/// 8-bit, signed, mono samples. Left, then Right.
+	#[doc = "8-bit, signed, mono samples. Left, then Right"]
 	EightBitStereo,
-	/// 16-bit, signed, mono samples. Little-endian.
+	#[doc = "16-bit, signed, mono samples. Little-endian"]
 	SixteenBitMono,
-	/// 16-bit, signed, stereo samples. Little-endian. Left, then Right.
-	SixteenBitStereo,
-}
+	#[doc = "16-bit, signed, stereo samples. Little-endian. Left, then Right"]
+	SixteenBitStereo
+});
 
 /// Configuration for an Audio Output or Input
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
 	/// What format are the samples
-	pub sample_format: SampleFormat,
+	pub sample_format: FfiSampleFormat,
 	/// How many samples are there per second (e.g. 48,000)?
 	///
 	/// Supported values are likely to include some of the following:
@@ -70,17 +68,15 @@ pub struct Config {
 	pub sample_rate_hz: u32,
 }
 
-/// Describes the direction audio is flowing, for a given Audio Mixer Channel.
-#[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Direction {
-	/// Audio In, e.g. Line-In
+make_ffi_enum!("Describes the direction audio is flowing, for a given Audio Mixer Channel",
+	Direction, FfiDirection, {
+	#[doc = "Audio In, e.g. Line-In"]
 	Input,
-	/// Audio Out, e.g. Headphone Out
+	#[doc = "Audio Out, e.g. Headphone Out"]
 	Output,
-	/// Internal audio loop-back from an Input to an Output, e.g. Side-tone
-	Loopback,
-}
+	#[doc = "Internal audio loop-back from an Input to an Output, e.g. Side-tone"]
+	Loopback
+});
 
 /// Describes an Audio Mixer Channel.
 ///
@@ -91,7 +87,7 @@ pub struct MixerChannelInfo {
 	/// The name of this Audio Mixer Channel (e.g. `Line In`)
 	pub name: crate::FfiString<'static>,
 	/// Is this an Input or an Output?
-	pub direction: Direction,
+	pub direction: FfiDirection,
 	/// What value of `current_level` gives the loudest audio? All values
 	/// equal to, or above, this value will be equally and maximally loud.
 	pub max_level: u8,

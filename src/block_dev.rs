@@ -23,7 +23,7 @@
 // Imports
 // ============================================================================
 
-// None
+use crate::make_ffi_enum;
 
 // ============================================================================
 // Constants
@@ -35,19 +35,17 @@
 // Types
 // ============================================================================
 
-/// The types of block device we support.
-#[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum DeviceType {
-	/// An *SD* Card
+make_ffi_enum!("The types of block device we support",
+DeviceType, FfiDeviceType, {
+	#[doc = "An *SD* Card"]
 	SecureDigitalCard,
-	/// A Hard Drive
+	#[doc = "A Hard Drive"]
 	HardDiskDrive,
-	/// A floppy disk in a floppy disk drive
+	#[doc = "A floppy disk in a floppy disk drive"]
 	FloppyDiskDrive,
-	/// A compact flash card
-	CompactFlashCard,
-}
+	#[doc = "A compact flash card"]
+	CompactFlashCard
+});
 
 /// Information about a block device.
 #[repr(C)]
@@ -57,7 +55,7 @@ pub struct DeviceInfo {
 	/// `CF1`)
 	pub name: crate::FfiString<'static>,
 	/// The kind of block device this is.
-	pub device_type: DeviceType,
+	pub device_type: FfiDeviceType,
 	/// The size of an addressable block, in bytes.
 	pub block_size: u32,
 	/// The total number of addressable blocks.

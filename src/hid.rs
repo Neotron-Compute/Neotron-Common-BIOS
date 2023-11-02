@@ -64,12 +64,12 @@ pub struct MouseData {
 }
 
 /// Represents the buttons on a mouse.
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct MouseButtons(u8);
 
 /// Represents the LEDs on a keyboard.
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct KeyboardLeds(u8);
 
