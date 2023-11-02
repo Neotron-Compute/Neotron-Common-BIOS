@@ -37,8 +37,8 @@
 // ============================================================================
 
 /// The kinds of Peripheral you can put on a Neotron Bus
-#[repr(u8)]
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[repr(C)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PeripheralKind {
 	/// A Neotron Bus Slot. The OS will need to read the EEPROM at address
 	/// `0x50 + slot_id` to find out what is fitted (if anything).

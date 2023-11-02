@@ -37,6 +37,7 @@
 // ============================================================================
 
 /// The set of errors you can get from this module.
+#[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Error {
 	/// You supplied a parameter that was out of range, or otherwise unsupported.
@@ -52,7 +53,7 @@ pub enum Error {
 pub struct Mode(u8);
 
 /// Describes the format of the video memory.
-#[repr(u8)]
+#[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Format {
 	/// Text mode with an 8x16 font.
@@ -102,7 +103,7 @@ pub enum Format {
 }
 
 /// Describes the timing of the video signal.
-#[repr(u8)]
+#[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Timing {
 	/// VGA Standard 640x480 @ 60Hz.
@@ -124,7 +125,7 @@ pub enum Timing {
 
 /// Describes how a video mode is caled
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Scaling {
 	/// No video scaling
 	None,

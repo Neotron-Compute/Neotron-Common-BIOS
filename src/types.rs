@@ -41,8 +41,8 @@
 pub type OsStartFn = extern "C" fn(&crate::Api) -> !;
 
 /// Any API function which can return an error, uses this error type.
-#[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Error {
 	/// An invalid device number was given to the function.
 	InvalidDevice,
@@ -85,12 +85,28 @@ pub struct Ticks(pub u64);
 
 /// The kinds of memory we know about
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum MemoryKind {
 	/// Read-write memory
+	///
+	/// The OS is free to use Ram regions.
 	Ram,
 	/// Read-only memory
+	///
+	/// The OS is free to look inside Rom regions for ROM filing systems.
 	Rom,
+	/// Used stack.
+	///
+	/// This is for information - the OS should not read or write here.
+	StackUsed,
+	/// Free stack
+	///
+	/// This is for information - the OS should not read or write here.
+	StackFree,
+	/// Reserved memory region
+	///
+	/// This is for information - the OS should not read or write here.
+	Reserved,
 }
 
 /// Represents a region in memory.
@@ -107,7 +123,7 @@ pub struct MemoryRegion {
 
 /// The kinds of power control we can do.
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PowerMode {
 	/// Turn the system power off
 	Off,
@@ -178,6 +194,9 @@ impl core::fmt::Display for MemoryKind {
 			match self {
 				MemoryKind::Rom => "ROM",
 				MemoryKind::Ram => "RAM",
+				MemoryKind::StackUsed => "StackUsed",
+				MemoryKind::StackFree => "StackFree",
+				MemoryKind::Reserved => "Reserved",
 			}
 		)
 	}
