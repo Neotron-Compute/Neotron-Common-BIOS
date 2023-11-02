@@ -24,7 +24,7 @@
 // Imports
 // ============================================================================
 
-// None
+use crate::make_ffi_enum;
 
 // ============================================================================
 // Constants
@@ -36,20 +36,18 @@
 // Types
 // ============================================================================
 
-/// The kinds of Peripheral you can put on a Neotron Bus
-#[repr(u8)]
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum PeripheralKind {
-	/// A Neotron Bus Slot. The OS will need to read the EEPROM at address
-	/// `0x50 + slot_id` to find out what is fitted (if anything).
+make_ffi_enum!("The kinds of Peripheral you can put on a Neotron Bus",
+	PeripheralKind, FfiPeripheralKind, {
+	#[doc = "A Neotron Bus Slot.\n\nThe OS will need to read the EEPROM at address"]
+	#[doc = "`0x50 + slot_id` to find out what is fitted (if anything)."]
 	Slot,
-	/// A hard-wired SD/MMC Card slot wired for SPI Mode. The interrupt pin is
-	/// wired to "Card Detect" with a pull-up, so the line goes low when a
-	/// card is inserted and goes high when the card is removed.
+	#[doc = "A hard-wired SD/MMC Card slot wired for SPI Mode.\n\nThe interrupt pin is"]
+	#[doc = "wired to *Card Detect* with a pull-up, so the line goes low when a card is "]
+	#[doc = "inserted and goes high when the card is removed."]
 	SdCard,
-	/// This Peripheral ID is reserved for the BIOS to use.
-	Reserved,
-}
+	#[doc = "This Peripheral ID is reserved for the BIOS to use."]
+	Reserved
+});
 
 /// Describes a Neotron Bus Peripheral
 #[repr(C)]
@@ -58,7 +56,7 @@ pub struct PeripheralInfo {
 	/// A name, such as `slot0`
 	pub name: crate::FfiString<'static>,
 	/// The kind of peripheral
-	pub kind: PeripheralKind,
+	pub kind: FfiPeripheralKind,
 }
 
 // ============================================================================

@@ -38,7 +38,7 @@ pub use pc_keyboard::KeyCode;
 
 /// Represents a event from a Human Input Device (such as a mouse or keyboard).
 #[repr(C)]
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HidEvent {
 	/// A key was pressed.
 	KeyPress(KeyCode),
@@ -64,12 +64,12 @@ pub struct MouseData {
 }
 
 /// Represents the buttons on a mouse.
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct MouseButtons(u8);
 
 /// Represents the LEDs on a keyboard.
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct KeyboardLeds(u8);
 

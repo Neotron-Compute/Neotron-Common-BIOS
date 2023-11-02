@@ -49,6 +49,101 @@ pub use neotron_ffi::{FfiBuffer, FfiByteSlice, FfiOption, FfiResult, FfiString};
 pub const API_VERSION: Version = Version::new(0, 6, 1);
 
 // ============================================================================
+// Macros
+// ============================================================================
+
+/// Creates an FFI-safe struct to use in place of an enum.
+#[macro_export]
+macro_rules! make_ffi_enum {
+	(
+		$enumdoc: literal,
+		$enum_name:ident,
+		$ffi_enum_name:ident,
+		{
+			$(
+				$(
+					#[doc = $docs:literal]
+				)+
+				$variant:ident
+			),+
+		}
+	) => {
+		#[doc = $enumdoc]
+		///
+		/// Can be converted to [
+		#[doc = stringify!($ffi_enum_name)]
+		/// ] for transport across an FFI boundary.
+		#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+		#[non_exhaustive]
+		#[repr(u8)]
+		pub enum $enum_name {
+			$(
+				$(
+					#[doc = $docs]
+				)+
+				$variant
+			),+
+		}
+
+		impl $enum_name {
+			/// Convert this enum into an FFI-safe [
+			#[doc = stringify!($ffi_enum_name)]
+			/// ] value.
+			pub const fn make_ffi_safe(self) -> $ffi_enum_name {
+				$ffi_enum_name::new(self)
+			}
+		}
+
+		/// An FFI-safe version of [
+		#[doc = stringify!($enum_name)]
+		/// ]
+		#[repr(transparent)]
+		#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+		pub struct $ffi_enum_name(pub u8);
+
+		impl $ffi_enum_name {
+			/// Create an FFI-safe version of [
+			#[doc = stringify!($enum_name)]
+			/// ]
+			pub const fn new(value: $enum_name) -> Self {
+				Self(value as u8)
+			}
+
+			/// Try and convert from this FFI-safe value to a real enum.
+			pub const fn make_safe(self) -> Result<$enum_name, $crate::EnumConversionFail> {
+				$(
+					if self.0 == ($enum_name::$variant as u8) {
+						return Ok($enum_name::$variant);
+					}
+				)+
+				Err($crate::EnumConversionFail())
+			}
+		}
+
+		impl ::core::convert::From<$enum_name> for $ffi_enum_name {
+			/// Convert from the enum to the FFI-safe version.
+			///
+			/// This conversion is infallible.
+			fn from(value: $enum_name) -> Self {
+				value.make_ffi_safe()
+			}
+		}
+
+		impl ::core::convert::TryFrom<$ffi_enum_name> for $enum_name {
+			type Error = $crate::EnumConversionFail;
+
+			/// Try and convert the FFI-safe version into an enum.
+			///
+			/// Might fail if the other side of the FFI boundary knows about
+			/// enum variants we don't yet know about.
+			fn try_from(value: $ffi_enum_name) -> Result<Self, $crate::EnumConversionFail> {
+				value.make_safe()
+			}
+		}
+	}
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -603,7 +698,7 @@ pub struct Api {
 	/// This function will not return, because the system will be switched off
 	/// before it can return. In the event on an error, this function will hang
 	/// instead.
-	pub power_control: extern "C" fn(mode: PowerMode) -> !,
+	pub power_control: extern "C" fn(mode: FfiPowerMode) -> !,
 
 	// ========================================================================
 	// Mutex functions
