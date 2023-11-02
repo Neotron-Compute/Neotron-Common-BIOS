@@ -530,6 +530,68 @@ impl RGBColour {
 	}
 }
 
+impl TextForegroundColour {
+	/// Convert a foreground colour into a background colour
+	pub const fn make_background(self) -> TextBackgroundColour {
+		match self {
+			TextForegroundColour::Black => TextBackgroundColour::Black,
+			TextForegroundColour::Blue => TextBackgroundColour::Blue,
+			TextForegroundColour::Green => TextBackgroundColour::Green,
+			TextForegroundColour::Cyan => TextBackgroundColour::Cyan,
+			TextForegroundColour::Red => TextBackgroundColour::Red,
+			TextForegroundColour::Magenta => TextBackgroundColour::Magenta,
+			TextForegroundColour::Brown => TextBackgroundColour::Brown,
+			TextForegroundColour::LightGray => TextBackgroundColour::LightGray,
+			TextForegroundColour::DarkGray => TextBackgroundColour::Black,
+			TextForegroundColour::LightBlue => TextBackgroundColour::Blue,
+			TextForegroundColour::LightGreen => TextBackgroundColour::Green,
+			TextForegroundColour::LightCyan => TextBackgroundColour::Cyan,
+			TextForegroundColour::LightRed => TextBackgroundColour::Red,
+			TextForegroundColour::Pink => TextBackgroundColour::Magenta,
+			TextForegroundColour::Yellow => TextBackgroundColour::Brown,
+			TextForegroundColour::White => TextBackgroundColour::LightGray,
+		}
+	}
+
+	/// Convert to the brighter version of the same shade
+	pub const fn brighten(self) -> TextForegroundColour {
+		match self {
+			TextForegroundColour::Black => TextForegroundColour::DarkGray,
+			TextForegroundColour::Red => TextForegroundColour::LightRed,
+			TextForegroundColour::Green => TextForegroundColour::LightGreen,
+			TextForegroundColour::Brown => TextForegroundColour::Yellow,
+			TextForegroundColour::Blue => TextForegroundColour::LightBlue,
+			TextForegroundColour::Magenta => TextForegroundColour::Pink,
+			TextForegroundColour::Cyan => TextForegroundColour::LightCyan,
+			TextForegroundColour::LightGray => TextForegroundColour::White,
+			TextForegroundColour::DarkGray => TextForegroundColour::LightGray,
+			TextForegroundColour::LightBlue => TextForegroundColour::LightBlue,
+			TextForegroundColour::LightGreen => TextForegroundColour::LightGreen,
+			TextForegroundColour::LightCyan => TextForegroundColour::LightCyan,
+			TextForegroundColour::LightRed => TextForegroundColour::LightRed,
+			TextForegroundColour::Pink => TextForegroundColour::Pink,
+			TextForegroundColour::Yellow => TextForegroundColour::Yellow,
+			TextForegroundColour::White => TextForegroundColour::White,
+		}
+	}
+}
+
+impl TextBackgroundColour {
+	/// Convert a background colour into a foreground colour
+	pub const fn make_foreground(self) -> TextForegroundColour {
+		match self {
+			TextBackgroundColour::Black => TextForegroundColour::Black,
+			TextBackgroundColour::Blue => TextForegroundColour::Blue,
+			TextBackgroundColour::Green => TextForegroundColour::Green,
+			TextBackgroundColour::Cyan => TextForegroundColour::Cyan,
+			TextBackgroundColour::Red => TextForegroundColour::Red,
+			TextBackgroundColour::Magenta => TextForegroundColour::Magenta,
+			TextBackgroundColour::Brown => TextForegroundColour::Brown,
+			TextBackgroundColour::LightGray => TextForegroundColour::LightGray,
+		}
+	}
+}
+
 impl Attr {
 	/// Make a new Attribute Value.
 	///
