@@ -38,6 +38,7 @@
 
 /// Identifies which sort of serial port each device represents.
 #[repr(C)]
+#[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DeviceType {
 	/// An RS-232 interface
@@ -56,6 +57,7 @@ pub enum DeviceType {
 /// Whether each word contains a parity bit, and if so, how it is
 /// calculated.
 #[repr(C)]
+#[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Parity {
 	/// An extra parity bit is added to each word. There will be an odd
@@ -74,6 +76,7 @@ pub enum Parity {
 
 /// Whether to use hardware handshaking lines.
 #[repr(C)]
+#[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Handshaking {
 	/// No hardware handshaking - bytes will be dropped if there is an
@@ -95,6 +98,7 @@ pub enum Handshaking {
 
 /// The number of stop bits after each word.
 #[repr(C)]
+#[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum StopBits {
 	/// One stop bit is added to each word
@@ -105,6 +109,7 @@ pub enum StopBits {
 
 /// The number of data bits in each word sent or received by the UART.
 #[repr(C)]
+#[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DataBits {
 	/// Each word comprises 7 data bits (plus start bit, stop bits and any

@@ -37,7 +37,8 @@
 // ============================================================================
 
 /// Defines the format of each sample (mono, stereo, 8-bit, 16-bit, etc).
-#[repr(u8)]
+#[repr(C)]
+#[non_exhaustive]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SampleFormat {
 	/// 8-bit, signed, mono samples.
@@ -71,7 +72,8 @@ pub struct Config {
 }
 
 /// Describes the direction audio is flowing, for a given Audio Mixer Channel.
-#[repr(u8)]
+#[repr(C)]
+#[non_exhaustive]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Direction {
 	/// Audio In, e.g. Line-In

@@ -37,7 +37,8 @@
 
 /// The types of block device we support.
 #[repr(C)]
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[non_exhaustive]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DeviceType {
 	/// An *SD* Card
 	SecureDigitalCard,
