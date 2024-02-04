@@ -8,6 +8,9 @@
 
 * The `video_set_mode` API now takes a framebuffer pointer.
 * The `video_set_framebuffer` API was removed.
+* Made all types FFI safe (use `struct Foo(u8)` not `enum Foo`)
+* Add `MemoryKind::StackFree` and `MemoryKind::StackUsed`
+* `TextForegroundColour` and `TextBackgroundColour` are now enums, not structs with const values.
 
 ## v0.11.1 - 2023-10-01 ([Source](https://github.com/neotron-compute/neotron-common-bios/tree/v0.11.1) | [Release](https://github.com/neotron-compute/neotron-common-bios/releases/tag/v0.11.1) | [Crate](https://crates.io/crates/neotron-common-bios/v0.11.1))
 
@@ -40,8 +43,8 @@
 
 ## v0.7.0 - 2022-11-17 ([Source](https://github.com/neotron-compute/neotron-common-bios/tree/v0.7.0) | [Release](https://github.com/neotron-compute/neotron-common-bios/releases/tag/v0.7.0) | [Crate](https://crates.io/crates/neotron-common-bios/v0.7.0))
 
-* Change `time_get` to `time_clock_get` 
-* Change `time_set` to `time_clock_set` 
+* Change `time_get` to `time_clock_get`
+* Change `time_set` to `time_clock_set`
 * Add `time_ticks_get` and `time_ticks_per_second`
 * Add `bus_interrupt_status`
 * Remove `delay`
