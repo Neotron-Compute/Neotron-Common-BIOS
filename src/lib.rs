@@ -49,6 +49,101 @@ pub use neotron_ffi::{FfiBuffer, FfiByteSlice, FfiOption, FfiResult, FfiString};
 pub const API_VERSION: Version = Version::new(0, 6, 1);
 
 // ============================================================================
+// Macros
+// ============================================================================
+
+/// Creates an FFI-safe struct to use in place of an enum.
+#[macro_export]
+macro_rules! make_ffi_enum {
+	(
+		$enumdoc: literal,
+		$enum_name:ident,
+		$ffi_enum_name:ident,
+		{
+			$(
+				$(
+					#[doc = $docs:literal]
+				)+
+				$variant:ident
+			),+
+		}
+	) => {
+		#[doc = $enumdoc]
+		///
+		/// Can be converted to [
+		#[doc = stringify!($ffi_enum_name)]
+		/// ] for transport across an FFI boundary.
+		#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+		#[non_exhaustive]
+		#[repr(u8)]
+		pub enum $enum_name {
+			$(
+				$(
+					#[doc = $docs]
+				)+
+				$variant
+			),+
+		}
+
+		impl $enum_name {
+			/// Convert this enum into an FFI-safe [
+			#[doc = stringify!($ffi_enum_name)]
+			/// ] value.
+			pub const fn make_ffi_safe(self) -> $ffi_enum_name {
+				$ffi_enum_name::new(self)
+			}
+		}
+
+		/// An FFI-safe version of [
+		#[doc = stringify!($enum_name)]
+		/// ]
+		#[repr(transparent)]
+		#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+		pub struct $ffi_enum_name(pub u8);
+
+		impl $ffi_enum_name {
+			/// Create an FFI-safe version of [
+			#[doc = stringify!($enum_name)]
+			/// ]
+			pub const fn new(value: $enum_name) -> Self {
+				Self(value as u8)
+			}
+
+			/// Try and convert from this FFI-safe value to a real enum.
+			pub const fn make_safe(self) -> Result<$enum_name, $crate::EnumConversionFail> {
+				$(
+					if self.0 == ($enum_name::$variant as u8) {
+						return Ok($enum_name::$variant);
+					}
+				)+
+				Err($crate::EnumConversionFail())
+			}
+		}
+
+		impl ::core::convert::From<$enum_name> for $ffi_enum_name {
+			/// Convert from the enum to the FFI-safe version.
+			///
+			/// This conversion is infallible.
+			fn from(value: $enum_name) -> Self {
+				value.make_ffi_safe()
+			}
+		}
+
+		impl ::core::convert::TryFrom<$ffi_enum_name> for $enum_name {
+			type Error = $crate::EnumConversionFail;
+
+			/// Try and convert the FFI-safe version into an enum.
+			///
+			/// Might fail if the other side of the FFI boundary knows about
+			/// enum variants we don't yet know about.
+			fn try_from(value: $ffi_enum_name) -> Result<Self, $crate::EnumConversionFail> {
+				value.make_safe()
+			}
+		}
+	}
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -177,19 +272,26 @@ pub struct Api {
 	// ========================================================================
 	/// Does this Neotron BIOS support this video mode?
 	pub video_is_valid_mode: extern "C" fn(mode: video::Mode) -> bool,
-	/// Does this Neotron BIOS require extra VRAM (passed with
-	/// `video_set_framebuffer`) before this mode will work?
+	/// Does this Neotron BIOS require extra VRAM for this mode to work?
+	///
+	/// If `true` returned here, you must pass some VRAM in the call to
+	/// [`Api::video_set_mode`], otherwise that function will return an error.
+	///
+	/// If `false` returned here, you can pass NULL to [`Api::video_set_mode`].
 	pub video_mode_needs_vram: extern "C" fn(mode: video::Mode) -> bool,
-	/// Switch to a new video mode.
+	/// Switch to a new video mode, passing an optional pointer to some VRAM.
 	///
-	/// The contents of the screen are undefined after a call to this function.
+	/// If the `vram` pointer is NULL, the BIOS will attempt to use any internal
+	/// VRAM it has available. If it doesn't have enough VRAM, you will get no
+	/// picture.
 	///
-	/// If the BIOS does not have enough reserved RAM (or dedicated VRAM) to
-	/// support this mode, the change will succeed but a subsequent call to
-	/// `video_get_framebuffer` will return `null`. You must then supply a
-	/// pointer to a block of size `Mode::frame_size_bytes()` to
-	/// `video_set_framebuffer` before any video will appear.
-	pub video_set_mode: extern "C" fn(mode: video::Mode) -> crate::ApiResult<()>,
+	/// # Safety
+	///
+	/// If a non-null `vram` value is given, it must be the start of a 32-bit
+	///   aligned block which is at least [`frame_size_bytes()`](
+	///   video::Mode::frame_size_bytes) bytes in length
+	pub video_set_mode:
+		unsafe extern "C" fn(mode: video::Mode, vram: *mut u32) -> crate::ApiResult<()>,
 	/// Returns the video mode the BIOS is currently in.
 	///
 	/// The OS should call this function immediately after start-up and note
@@ -209,26 +311,7 @@ pub struct Api {
 	/// framebuffer to `video_set_framebuffer`. The BIOS will always be able
 	/// to provide the 'basic' text buffer experience from reserves, so this
 	/// function will never return `null` on start-up.
-	pub video_get_framebuffer: extern "C" fn() -> *mut u8,
-	/// Set the framebuffer address.
-	///
-	/// Tell the BIOS where it should start fetching pixel or textual data
-	/// from(depending on the current video mode). This pointer is retained
-	/// and the memory is continually acccessed after this function call ends.
-	///
-	/// This value is forgotten after a video mode change and must be
-	/// re-supplied.
-	///
-	/// Once the BIOS has handed over to the OS, it will never write to this
-	/// video memory, only read from it.
-	///
-	/// # Safety
-	///
-	/// The region pointed to by `start_address` must be large enough to
-	/// contain however much video memory is required by both the current
-	/// video mode.
-	pub video_set_framebuffer:
-		unsafe extern "C" fn(start_address: *const u8) -> crate::ApiResult<()>,
+	pub video_get_framebuffer: extern "C" fn() -> *mut u32,
 	/// Wait for the next occurence of the specified video scan-line.
 	///
 	/// In general we must assume that the video memory is read top-to-bottom
@@ -603,7 +686,7 @@ pub struct Api {
 	/// This function will not return, because the system will be switched off
 	/// before it can return. In the event on an error, this function will hang
 	/// instead.
-	pub power_control: extern "C" fn(mode: PowerMode) -> !,
+	pub power_control: extern "C" fn(mode: FfiPowerMode) -> !,
 
 	// ========================================================================
 	// Mutex functions

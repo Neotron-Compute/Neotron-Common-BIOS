@@ -24,7 +24,7 @@
 // Imports
 // ============================================================================
 
-// None
+use crate::make_ffi_enum;
 
 // ============================================================================
 // Constants
@@ -36,13 +36,6 @@
 // Types
 // ============================================================================
 
-/// The set of errors you can get from this module.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Error {
-	/// You supplied a parameter that was out of range, or otherwise unsupported.
-	BadParam,
-}
-
 /// Describes a video mode.
 ///
 /// A Neotron BIOS may support multiple video modes. Each is described using
@@ -51,58 +44,70 @@ pub enum Error {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Mode(u8);
 
-/// Describes the format of the video memory.
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Format {
-	/// Text mode with an 8x16 font.
-	///
-	/// Memory is arranged into `(u8, u8)` units. The first `u8` is the
-	/// character, the second `u8` unit is the foreground/background colour.
-	///
-	/// The font consists of 8px by 16px glyphs.
-	Text8x16 = 0,
-	/// Text mode with an 8x8 font.
-	///
-	/// Memory is arranged into `(u8, u8)` units. The first `u8` is the
-	/// character, the second `u8` unit is the foreground/background colour.
-	///
-	/// The font consists of 8px by 8px glyphs.
-	Text8x8 = 1,
-	/// True-colour graphics mode, with 24-bit pixels in 32-bit units.
-	///
-	/// Memory is arranged into `u32` units. Each unit is of the format
-	/// `0x00RRGGBB`.
-	Chunky32 = 2,
-	/// High-colour graphics mode, with 16-bit pixels.
-	///
-	/// Memory is arranged into `u16` units. Each unit is of the format
-	/// `0bRRRRR_GGGGGG_BBBBB`.
-	Chunky16 = 3,
-	/// Colour graphics mode, with 8-bit indexed pixels.
-	///
-	/// Memory is arranged into `u8` units. Each unit is a lookup into the
-	/// pallette.
-	Chunky8 = 4,
-	/// Colour graphics mode, with 4-bit indexed pixels.
-	///
-	/// Memory is arranged into `u8` units. Each unit is two 4-bit pixels,
-	/// each a lookup into the pallette, or `0bAAAA_BBBB`.
-	Chunky4 = 5,
-	/// Colour graphics mode, with 2-bit indexed pixels.
-	///
-	/// Memory is arranged into `u8` units. Each unit is four 2-bit pixels,
-	/// each a lookup into the pallette, or `0bAA_BB_CC_DD`
-	Chunky2 = 6,
-	/// Mono graphics mode, with 1-bit per pixel.
-	///
-	/// Memory is arranged into `u8` units. Each unit is eight 1-bit pixels,
-	/// each a lookup into the pallette, or `0bA_B_C_D_E_F_G_H`
-	Chunky1 = 7,
-}
+make_ffi_enum!("Describes the format of the video memory.",
+	Format, FfiFormat, {
+	#[doc = "Text mode with an 8x16 font."]
+	#[doc = ""]
+	#[doc = "Memory is arranged into `(u8, u8)` units. The first `u8` is the"]
+	#[doc = "character, the second `u8` unit is the foreground/background colour."]
+	#[doc = ""]
+	#[doc = "The font consists of 8px by 16px glyphs."]
+	#[doc = ""]
+	#[doc = "There must be an even number of characters per line."]
+	Text8x16,
+	#[doc = "Text mode with an 8x8 font."]
+	#[doc = ""]
+	#[doc = "Memory is arranged into `(u8, u8)` units. The first `u8` is the"]
+	#[doc = "character, the second `u8` unit is the foreground/background colour."]
+	#[doc = ""]
+	#[doc = "The font consists of 8px by 8px glyphs."]
+	#[doc = ""]
+	#[doc = "There must be an even number of characters per line."]
+	Text8x8,
+	#[doc = "True-colour graphics mode, with 24-bit pixels in 32-bit units."]
+	#[doc = ""]
+	#[doc = "Memory is arranged into `u32` units. Each unit is of the format"]
+	#[doc = "`0x00RRGGBB`."]
+	Chunky32,
+	#[doc = "High-colour graphics mode, with 16-bit pixels."]
+	#[doc = ""]
+	#[doc = "Memory is arranged into `u16` units. Each unit is of the format"]
+	#[doc = "`0bRRRRR_GGGGGG_BBBBB`."]
+	#[doc = ""]
+	#[doc = "There must be an even number of pixels per line."]
+	Chunky16,
+	#[doc = "Colour graphics mode, with 8-bit indexed pixels."]
+	#[doc = ""]
+	#[doc = "Memory is arranged into `u8` units. Each unit is a lookup into the"]
+	#[doc = "palette."]
+	#[doc = ""]
+	#[doc = "The number of pixels per line must be a multiple of 8."]
+	Chunky8,
+	#[doc = "Colour graphics mode, with 4-bit indexed pixels."]
+	#[doc = ""]
+	#[doc = "Memory is arranged into `u8` units. Each unit is two 4-bit pixels,"]
+	#[doc = "each a lookup into the palette, or `0bAAAA_BBBB`."]
+	#[doc = ""]
+	#[doc = "The number of pixels per line must be a multiple of 8."]
+	Chunky4,
+	#[doc = "Colour graphics mode, with 2-bit indexed pixels."]
+	#[doc = ""]
+	#[doc = "Memory is arranged into `u8` units. Each unit is four 2-bit pixels,"]
+	#[doc = "each a lookup into the palette, or `0bAA_BB_CC_DD`"]
+	#[doc = ""]
+	#[doc = "The number of pixels per line must be a multiple of 16."]
+	Chunky2,
+	#[doc = "Mono graphics mode, with 1-bit per pixel."]
+	#[doc = ""]
+	#[doc = "Memory is arranged into `u8` units. Each unit is eight 1-bit pixels,"]
+	#[doc = "each a lookup into the palette, or `0bA_B_C_D_E_F_G_H`"]
+	#[doc = ""]
+	#[doc = "The number of pixels per line must be a multiple of 32."]
+	Chunky1
+});
 
 /// Describes the timing of the video signal.
-#[repr(u8)]
+#[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Timing {
 	/// VGA Standard 640x480 @ 60Hz.
@@ -124,7 +129,7 @@ pub enum Timing {
 
 /// Describes how a video mode is caled
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Scaling {
 	/// No video scaling
 	None,
@@ -146,19 +151,61 @@ pub struct RGBColour(u32);
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Glyph(pub u8);
 
-/// Represents a pallette index that we can use as a text foreground colour.
-///
-/// Only supports the range `0..=15`
-#[repr(transparent)]
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub struct TextForegroundColour(u8);
+make_ffi_enum!("Text-mode foreground colour value.",
+	TextForegroundColour, FfiTextForegroundColour, {
+	#[doc = "Black (palette 0)"]
+	Black,
+	#[doc = "Blue (palette 1)"]
+	Blue,
+	#[doc = "Green (palette 2)"]
+	Green,
+	#[doc = "Cyan (palette 3)"]
+	Cyan,
+	#[doc = "Red (palette 4)"]
+	Red,
+	#[doc = "Magenta (palette 5)"]
+	Magenta,
+	#[doc = "Brown (palette 6)"]
+	Brown,
+	#[doc = "Light Gray (palette 7)"]
+	LightGray,
+	#[doc = "Dark Gray (palette 8)"]
+	DarkGray,
+	#[doc = "Light Blue (palette 9)"]
+	LightBlue,
+	#[doc = "Light Green (palette 10)"]
+	LightGreen,
+	#[doc = "Light Cyan (palette 11)"]
+	LightCyan,
+	#[doc = "Light Red (palette 12)"]
+	LightRed,
+	#[doc = "Pink (palette 13)"]
+	Pink,
+	#[doc = "Yellow (palette 14)"]
+	Yellow,
+	#[doc = "White (palette 15)"]
+	White
+});
 
-/// Represents a pallette index that we can use as a text background colour.
-///
-/// Only supports the range `0..=7`
-#[repr(transparent)]
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub struct TextBackgroundColour(u8);
+make_ffi_enum!("Text-mode background colour value.",
+	TextBackgroundColour, FfiTextBackgroundColour, {
+	#[doc = "Black (palette 0)"]
+	Black,
+	#[doc = "Blue (palette 1)"]
+	Blue,
+	#[doc = "Green (palette 2)"]
+	Green,
+	#[doc = "Cyan (palette 2)"]
+	Cyan,
+	#[doc = "Red (palette 3)"]
+	Red,
+	#[doc = "Magenta (palette 4)"]
+	Magenta,
+	#[doc = "Brown (palette 5)"]
+	Brown,
+	#[doc = "Light Gray (palette 6)"]
+	LightGray
+});
 
 /// Represents VGA format foreground/background attributes.
 #[repr(transparent)]
@@ -293,6 +340,9 @@ impl Mode {
 	}
 
 	/// Gets how big the frame is, in bytes.
+	///
+	/// This will always be a multiple of four, because of the constraints
+	/// placed on the various formats we support.
 	#[inline]
 	pub const fn frame_size_bytes(self) -> usize {
 		let line_size = self.line_size_bytes();
@@ -498,117 +548,64 @@ impl RGBColour {
 }
 
 impl TextForegroundColour {
-	/// The highest value a VGA text-mode foreground colour can have.
-	pub const MAX: u8 = 15;
-
-	/// The colour *Black* in the default palette
-	pub const BLACK: Self = Self(0);
-	/// The colour *Blue* in the default palette
-	pub const BLUE: Self = Self(1);
-	/// The colour *Green* in the default palette
-	pub const GREEN: Self = Self(2);
-	/// The colour *Cyan* in the default palette
-	pub const CYAN: Self = Self(3);
-	/// The colour *Red* in the default palette
-	pub const RED: Self = Self(4);
-	/// The colour *Magenta* in the default palette
-	pub const MAGENTA: Self = Self(5);
-	/// The colour *Brown* in the default palette
-	pub const BROWN: Self = Self(6);
-	/// The colour *Light Gray* in the default palette
-	pub const LIGHT_GRAY: Self = Self(7);
-	/// The colour *Dark Gray* in the default palette
-	pub const DARK_GRAY: Self = Self(8);
-	/// The colour *Light Blue* in the default palette
-	pub const LIGHT_BLUE: Self = Self(9);
-	/// The colour *Light Green* in the default palette
-	pub const LIGHT_GREEN: Self = Self(10);
-	/// The colour *Light Cyan* in the default palette
-	pub const LIGHT_CYAN: Self = Self(11);
-	/// The colour *Light Red* in the default palette
-	pub const LIGHT_RED: Self = Self(12);
-	/// The colour *Pink* in the default palette
-	pub const PINK: Self = Self(13);
-	/// The colour *Yellow* in the default palette
-	pub const YELLOW: Self = Self(14);
-	/// The colour *White* in the default palette
-	pub const WHITE: Self = Self(15);
-
-	/// Make a new `TextForegroundColour` from an integer.
-	///
-	/// The value must be `<= Self::MAX`, or you will get an error.
-	#[inline]
-	pub const fn new(value: u8) -> Result<Self, Error> {
-		if value <= Self::MAX {
-			Ok(Self(value))
-		} else {
-			Err(Error::BadParam)
+	/// Convert a foreground colour into a background colour
+	pub const fn make_background(self) -> TextBackgroundColour {
+		match self {
+			TextForegroundColour::Black => TextBackgroundColour::Black,
+			TextForegroundColour::Blue => TextBackgroundColour::Blue,
+			TextForegroundColour::Green => TextBackgroundColour::Green,
+			TextForegroundColour::Cyan => TextBackgroundColour::Cyan,
+			TextForegroundColour::Red => TextBackgroundColour::Red,
+			TextForegroundColour::Magenta => TextBackgroundColour::Magenta,
+			TextForegroundColour::Brown => TextBackgroundColour::Brown,
+			TextForegroundColour::LightGray => TextBackgroundColour::LightGray,
+			TextForegroundColour::DarkGray => TextBackgroundColour::Black,
+			TextForegroundColour::LightBlue => TextBackgroundColour::Blue,
+			TextForegroundColour::LightGreen => TextBackgroundColour::Green,
+			TextForegroundColour::LightCyan => TextBackgroundColour::Cyan,
+			TextForegroundColour::LightRed => TextBackgroundColour::Red,
+			TextForegroundColour::Pink => TextBackgroundColour::Magenta,
+			TextForegroundColour::Yellow => TextBackgroundColour::Brown,
+			TextForegroundColour::White => TextBackgroundColour::LightGray,
 		}
 	}
 
-	/// Make a new `TextForegroundColour` from an integer without bounds checking.
-	///
-	/// # Safety
-	///
-	/// The value must be `<= Self::MAX`, or you will get undefined behaviour.
-	#[inline]
-	pub const unsafe fn new_unchecked(value: u8) -> Self {
-		Self(value)
-	}
-
-	/// Convert to a raw integer
-	#[inline]
-	pub const fn as_u8(self) -> u8 {
-		self.0
+	/// Convert to the brighter version of the same shade
+	pub const fn brighten(self) -> TextForegroundColour {
+		match self {
+			TextForegroundColour::Black => TextForegroundColour::DarkGray,
+			TextForegroundColour::Red => TextForegroundColour::LightRed,
+			TextForegroundColour::Green => TextForegroundColour::LightGreen,
+			TextForegroundColour::Brown => TextForegroundColour::Yellow,
+			TextForegroundColour::Blue => TextForegroundColour::LightBlue,
+			TextForegroundColour::Magenta => TextForegroundColour::Pink,
+			TextForegroundColour::Cyan => TextForegroundColour::LightCyan,
+			TextForegroundColour::LightGray => TextForegroundColour::White,
+			TextForegroundColour::DarkGray => TextForegroundColour::LightGray,
+			TextForegroundColour::LightBlue => TextForegroundColour::LightBlue,
+			TextForegroundColour::LightGreen => TextForegroundColour::LightGreen,
+			TextForegroundColour::LightCyan => TextForegroundColour::LightCyan,
+			TextForegroundColour::LightRed => TextForegroundColour::LightRed,
+			TextForegroundColour::Pink => TextForegroundColour::Pink,
+			TextForegroundColour::Yellow => TextForegroundColour::Yellow,
+			TextForegroundColour::White => TextForegroundColour::White,
+		}
 	}
 }
 
 impl TextBackgroundColour {
-	/// The highest value a VGA text-mode background colour can have.
-	pub const MAX: u8 = 7;
-
-	/// The colour *Black* in the default palette
-	pub const BLACK: Self = Self(0);
-	/// The colour *Blue* in the default palette
-	pub const BLUE: Self = Self(1);
-	/// The colour *Green* in the default palette
-	pub const GREEN: Self = Self(2);
-	/// The colour *Cyan* in the default palette
-	pub const CYAN: Self = Self(3);
-	/// The colour *Red* in the default palette
-	pub const RED: Self = Self(4);
-	/// The colour *Magenta* in the default palette
-	pub const MAGENTA: Self = Self(5);
-	/// The colour *Brown* in the default palette
-	pub const BROWN: Self = Self(6);
-	/// The colour *Light Gray* in the default palette
-	pub const LIGHT_GRAY: Self = Self(7);
-
-	/// Make a new TextForegroundColour from an integer.
-	///
-	/// The value must be `<= Self::MAX`, or you will get an error.
-	#[inline]
-	pub const fn new(value: u8) -> Result<Self, Error> {
-		if value <= Self::MAX {
-			Ok(Self(value))
-		} else {
-			Err(Error::BadParam)
+	/// Convert a background colour into a foreground colour
+	pub const fn make_foreground(self) -> TextForegroundColour {
+		match self {
+			TextBackgroundColour::Black => TextForegroundColour::Black,
+			TextBackgroundColour::Blue => TextForegroundColour::Blue,
+			TextBackgroundColour::Green => TextForegroundColour::Green,
+			TextBackgroundColour::Cyan => TextForegroundColour::Cyan,
+			TextBackgroundColour::Red => TextForegroundColour::Red,
+			TextBackgroundColour::Magenta => TextForegroundColour::Magenta,
+			TextBackgroundColour::Brown => TextForegroundColour::Brown,
+			TextBackgroundColour::LightGray => TextForegroundColour::LightGray,
 		}
-	}
-
-	/// Make a new TextForegroundColour from an integer without bounds checking.
-	///
-	/// # Safety
-	///
-	/// The value must be `<= Self::MAX`, or you will get undefined behaviour.
-	pub const unsafe fn new_unchecked(value: u8) -> Self {
-		Self(value)
-	}
-
-	/// Convert to a raw integer
-	#[inline]
-	pub const fn as_u8(self) -> u8 {
-		self.0
 	}
 }
 
@@ -626,8 +623,8 @@ impl Attr {
 	/// ```
 	#[inline]
 	pub const fn new(fg: TextForegroundColour, bg: TextBackgroundColour, blink: bool) -> Attr {
-		let fg = fg.0 & 0b1111;
-		let bg = (bg.0 & 0b111) << 4;
+		let fg = fg as u8 & 0b1111;
+		let bg = (bg as u8 & 0b111) << 4;
 		let blink = if blink { 1 << 7 } else { 0 };
 		let value = blink | bg | fg;
 		Attr(value)
@@ -636,13 +633,23 @@ impl Attr {
 	/// Get the foreground colour
 	#[inline]
 	pub const fn fg(&self) -> TextForegroundColour {
-		TextForegroundColour(self.0 & 0x0F)
+		match FfiTextForegroundColour(self.0 & 0x0F).make_safe() {
+			Ok(v) => v,
+			Err(_e) => {
+				panic!("Failed conversion")
+			}
+		}
 	}
 
 	/// Get the background colour
 	#[inline]
 	pub const fn bg(&self) -> TextBackgroundColour {
-		TextBackgroundColour((self.0 >> 4) & 0x07)
+		match FfiTextBackgroundColour((self.0 >> 4) & 0x07).make_safe() {
+			Ok(v) => v,
+			Err(_e) => {
+				panic!("Failed conversion")
+			}
+		}
 	}
 
 	/// Is the text blinking?

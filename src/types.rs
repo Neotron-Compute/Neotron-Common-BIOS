@@ -24,7 +24,7 @@
 // Imports
 // ============================================================================
 
-// None
+use crate::make_ffi_enum;
 
 // ============================================================================
 // Constants
@@ -41,24 +41,31 @@
 pub type OsStartFn = extern "C" fn(&crate::Api) -> !;
 
 /// Any API function which can return an error, uses this error type.
+///
+/// Errors start at 1 to leave a niche for when packing into a `Result<T,
+/// Error>`.
+#[repr(u8)]
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[repr(C)]
 pub enum Error {
 	/// An invalid device number was given to the function.
-	InvalidDevice,
+	InvalidDevice = 1,
 	/// That function doesn't work at this time.
 	Unimplemented,
 	/// The underlying hardware reported some error. The numeric code is BIOS
 	/// implementation specific but may give some clues.
-	DeviceError(u16),
+	DeviceError,
 	/// The underlying hardware could not accept the given configuration. The
 	/// numeric code is BIOS implementation specific but may give some clues.
-	UnsupportedConfiguration(u16),
+	UnsupportedConfiguration,
 	/// You used a Block Device API but there was no media in the drive
 	NoMediaFound,
 	/// You used a Block Device API asked for a block the device doesn't have
 	BlockOutOfBounds,
 }
+
+/// An error that specifically means 'unable to convert integer to enum'
+#[derive(Debug, Copy, Clone)]
+pub struct EnumConversionFail();
 
 /// Describes a period of time, after which the BIOS should give up.
 #[repr(C)]
@@ -83,15 +90,29 @@ pub struct Time {
 #[derive(Debug, Clone)]
 pub struct Ticks(pub u64);
 
-/// The kinds of memory we know about
-#[repr(C)]
-#[derive(Debug, Clone)]
-pub enum MemoryKind {
-	/// Read-write memory
+make_ffi_enum!("The kinds of memory we know about",
+	MemoryKind, FfiMemoryKind, {
+	#[doc = "Read-write memory."]
+	#[doc = ""]
+	#[doc = "The OS is free to use Ram regions for code or data."]
 	Ram,
-	/// Read-only memory
+	#[doc = "Read-only memory"]
+	#[doc = ""]
+	#[doc = "The OS is free to look inside Rom regions for ROM filing systems."]
 	Rom,
-}
+	#[doc = "Used stack."]
+	#[doc = ""]
+	#[doc = "This is for information - the OS should not read or write here."]
+	StackUsed,
+	#[doc = "Free stack"]
+	#[doc = ""]
+	#[doc = "This is for information - the OS should not read or write here."]
+	StackFree,
+	#[doc = "Reserved memory region"]
+	#[doc = ""]
+	#[doc = "This is for information - the OS should not read or write here."]
+	Reserved
+});
 
 /// Represents a region in memory.
 #[repr(C)]
@@ -102,23 +123,22 @@ pub struct MemoryRegion {
 	/// The length of the region
 	pub length: usize,
 	/// The kind of memory found at this region
-	pub kind: MemoryKind,
+	pub kind: FfiMemoryKind,
 }
 
-/// The kinds of power control we can do.
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub enum PowerMode {
-	/// Turn the system power off
+make_ffi_enum!("The kinds of power control we can do.",
+	PowerMode, FfiPowerMode, {
+	#[doc = "Turn the system power off"]
 	Off,
-	/// Reboot the main processor
+	#[doc = "Reboot the main processor"]
 	Reset,
-	/// Reboot the main processor, but tell it to enter a bootloader mode for
-	/// programming. Precisely what this will do will depend upon the BIOS. Some
-	/// BIOSes will not have a bootloader mode and this will do a regular
-	/// reboot.
-	Bootloader,
-}
+	#[doc = "Reboot the main processor, but tell it to enter a bootloader mode"]
+	#[doc = "for programming."]
+	#[doc = ""]
+	#[doc = "Precisely what this will do will depend upon the BIOS. Some BIOSes"]
+	#[doc = "will not have a bootloader mode and this will do a regular reboot."]
+	Bootloader
+});
 
 // ============================================================================
 // Impls
@@ -178,6 +198,9 @@ impl core::fmt::Display for MemoryKind {
 			match self {
 				MemoryKind::Rom => "ROM",
 				MemoryKind::Ram => "RAM",
+				MemoryKind::StackUsed => "StackUsed",
+				MemoryKind::StackFree => "StackFree",
+				MemoryKind::Reserved => "Reserved",
 			}
 		)
 	}
@@ -189,10 +212,11 @@ impl core::fmt::Display for MemoryRegion {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		write!(
 			f,
-			"{} KiB {} @ {:p}",
+			"{} KiB {} @ {:p}..{:p}",
 			self.length / 1024,
-			self.kind,
-			self.start
+			self.kind.make_safe().unwrap_or(MemoryKind::Reserved),
+			self.start,
+			unsafe { self.start.add(self.length) },
 		)
 	}
 }
