@@ -272,19 +272,26 @@ pub struct Api {
 	// ========================================================================
 	/// Does this Neotron BIOS support this video mode?
 	pub video_is_valid_mode: extern "C" fn(mode: video::Mode) -> bool,
-	/// Does this Neotron BIOS require extra VRAM (passed with
-	/// `video_set_framebuffer`) before this mode will work?
+	/// Does this Neotron BIOS require extra VRAM for this mode to work?
+	///
+	/// If `true` returned here, you must pass some VRAM in the call to
+	/// [`Api::video_set_mode`], otherwise that function will return an error.
+	///
+	/// If `false` returned here, you can pass NULL to [`Api::video_set_mode`].
 	pub video_mode_needs_vram: extern "C" fn(mode: video::Mode) -> bool,
-	/// Switch to a new video mode.
+	/// Switch to a new video mode, passing an optional pointer to some VRAM.
 	///
-	/// The contents of the screen are undefined after a call to this function.
+	/// If the `vram` pointer is NULL, the BIOS will attempt to use any internal
+	/// VRAM it has available. If it doesn't have enough VRAM, you will get no
+	/// picture.
 	///
-	/// If the BIOS does not have enough reserved RAM (or dedicated VRAM) to
-	/// support this mode, the change will succeed but a subsequent call to
-	/// `video_get_framebuffer` will return `null`. You must then supply a
-	/// pointer to a block of size `Mode::frame_size_bytes()` to
-	/// `video_set_framebuffer` before any video will appear.
-	pub video_set_mode: extern "C" fn(mode: video::Mode) -> crate::ApiResult<()>,
+	/// # Safety
+	///
+	/// If a non-null `vram` value is given, it must be the start of a 32-bit
+	///   aligned block which is at least [`frame_size_bytes()`](
+	///   video::Mode::frame_size_bytes) bytes in length
+	pub video_set_mode:
+		unsafe extern "C" fn(mode: video::Mode, vram: *mut u32) -> crate::ApiResult<()>,
 	/// Returns the video mode the BIOS is currently in.
 	///
 	/// The OS should call this function immediately after start-up and note
@@ -304,26 +311,7 @@ pub struct Api {
 	/// framebuffer to `video_set_framebuffer`. The BIOS will always be able
 	/// to provide the 'basic' text buffer experience from reserves, so this
 	/// function will never return `null` on start-up.
-	pub video_get_framebuffer: extern "C" fn() -> *mut u8,
-	/// Set the framebuffer address.
-	///
-	/// Tell the BIOS where it should start fetching pixel or textual data
-	/// from(depending on the current video mode). This pointer is retained
-	/// and the memory is continually acccessed after this function call ends.
-	///
-	/// This value is forgotten after a video mode change and must be
-	/// re-supplied.
-	///
-	/// Once the BIOS has handed over to the OS, it will never write to this
-	/// video memory, only read from it.
-	///
-	/// # Safety
-	///
-	/// The region pointed to by `start_address` must be large enough to
-	/// contain however much video memory is required by both the current
-	/// video mode.
-	pub video_set_framebuffer:
-		unsafe extern "C" fn(start_address: *const u8) -> crate::ApiResult<()>,
+	pub video_get_framebuffer: extern "C" fn() -> *mut u32,
 	/// Wait for the next occurence of the specified video scan-line.
 	///
 	/// In general we must assume that the video memory is read top-to-bottom

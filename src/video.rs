@@ -52,6 +52,8 @@ make_ffi_enum!("Describes the format of the video memory.",
 	#[doc = "character, the second `u8` unit is the foreground/background colour."]
 	#[doc = ""]
 	#[doc = "The font consists of 8px by 16px glyphs."]
+	#[doc = ""]
+	#[doc = "There must be an even number of characters per line."]
 	Text8x16,
 	#[doc = "Text mode with an 8x8 font."]
 	#[doc = ""]
@@ -59,6 +61,8 @@ make_ffi_enum!("Describes the format of the video memory.",
 	#[doc = "character, the second `u8` unit is the foreground/background colour."]
 	#[doc = ""]
 	#[doc = "The font consists of 8px by 8px glyphs."]
+	#[doc = ""]
+	#[doc = "There must be an even number of characters per line."]
 	Text8x8,
 	#[doc = "True-colour graphics mode, with 24-bit pixels in 32-bit units."]
 	#[doc = ""]
@@ -69,26 +73,36 @@ make_ffi_enum!("Describes the format of the video memory.",
 	#[doc = ""]
 	#[doc = "Memory is arranged into `u16` units. Each unit is of the format"]
 	#[doc = "`0bRRRRR_GGGGGG_BBBBB`."]
+	#[doc = ""]
+	#[doc = "There must be an even number of pixels per line."]
 	Chunky16,
 	#[doc = "Colour graphics mode, with 8-bit indexed pixels."]
 	#[doc = ""]
 	#[doc = "Memory is arranged into `u8` units. Each unit is a lookup into the"]
 	#[doc = "palette."]
+	#[doc = ""]
+	#[doc = "The number of pixels per line must be a multiple of 8."]
 	Chunky8,
 	#[doc = "Colour graphics mode, with 4-bit indexed pixels."]
 	#[doc = ""]
 	#[doc = "Memory is arranged into `u8` units. Each unit is two 4-bit pixels,"]
 	#[doc = "each a lookup into the palette, or `0bAAAA_BBBB`."]
+	#[doc = ""]
+	#[doc = "The number of pixels per line must be a multiple of 8."]
 	Chunky4,
 	#[doc = "Colour graphics mode, with 2-bit indexed pixels."]
 	#[doc = ""]
 	#[doc = "Memory is arranged into `u8` units. Each unit is four 2-bit pixels,"]
 	#[doc = "each a lookup into the palette, or `0bAA_BB_CC_DD`"]
+	#[doc = ""]
+	#[doc = "The number of pixels per line must be a multiple of 16."]
 	Chunky2,
 	#[doc = "Mono graphics mode, with 1-bit per pixel."]
 	#[doc = ""]
 	#[doc = "Memory is arranged into `u8` units. Each unit is eight 1-bit pixels,"]
 	#[doc = "each a lookup into the palette, or `0bA_B_C_D_E_F_G_H`"]
+	#[doc = ""]
+	#[doc = "The number of pixels per line must be a multiple of 32."]
 	Chunky1
 });
 
@@ -326,6 +340,9 @@ impl Mode {
 	}
 
 	/// Gets how big the frame is, in bytes.
+	///
+	/// This will always be a multiple of four, because of the constraints
+	/// placed on the various formats we support.
 	#[inline]
 	pub const fn frame_size_bytes(self) -> usize {
 		let line_size = self.line_size_bytes();
